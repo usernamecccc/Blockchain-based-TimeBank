@@ -9,46 +9,45 @@
         <div class="content">
             <el-form ref="form" :model="form" label-width="100px" style="width: 100%;" :rules="rules">
                 <el-form-item label="活动标题">
-                    <el-input v-model="form.title"  prefix-icon="el-icon-edit"></el-input>
+                    <el-input v-model="form.title" prefix-icon="el-icon-edit"></el-input>
                 </el-form-item>
                 <el-form-item label="活动名额">
-                    <el-input v-model="form.quota"  prefix-icon="el-icon-user"></el-input>
+                    <el-input v-model="form.quota" prefix-icon="el-icon-user"></el-input>
                 </el-form-item>
                 <el-form-item label="剩余名额">
-                    <el-input v-model="form.remain"  prefix-icon="el-icon-sell"></el-input>
+                    <el-input v-model="form.remain" prefix-icon="el-icon-sell"></el-input>
                 </el-form-item>
                 <el-form-item label="报名截止时间">
                     <div class="block">
-                        <el-date-picker
-                            v-model="form.deadline"
-                            type="datetime"
-                            placeholder="选择日期时间"
-                            align="right"
-                            :picker-options="pickerOptionsofform"
-                        >
+                        <el-date-picker v-model="form.deadline" type="datetime" placeholder="选择日期时间" align="right"
+                            :picker-options="pickerOptionsofform">
                         </el-date-picker>
                     </div>
                 </el-form-item>
                 <el-form-item label="活动日期">
-                    <el-input :value="formatActivityDates(form)" readonly prefix-icon="el-icon-date"></el-input>
+                    <<<<<<< HEAD <el-input :value="formatActivityDates(form)" readonly prefix-icon="el-icon-date">
+                        </el-input>
+                        =======
+                        <el-date-picker type="date" v-model="form.date" style="width: 100%;"></el-date-picker>
+                        >>>>>>> 97f3c8a (完成老人发布和删除服务需求)
                 </el-form-item>
                 <el-form-item label="活动开始时间">
-                    <el-input v-model="form.begin"  prefix-icon="el-icon-time"></el-input>
+                    <el-input v-model="form.begin" prefix-icon="el-icon-time"></el-input>
                 </el-form-item>
                 <el-form-item label="活动结束时间">
-                    <el-input v-model="form.end"  prefix-icon="el-icon-time"></el-input>
+                    <el-input v-model="form.end" prefix-icon="el-icon-time"></el-input>
                 </el-form-item>
                 <el-form-item label="活动地址">
-                    <el-input v-model="form.address"  prefix-icon="el-icon-location"></el-input>
+                    <el-input v-model="form.address" prefix-icon="el-icon-location"></el-input>
                 </el-form-item>
                 <el-form-item label="发布人电话">
-                    <el-input v-model="form.phone"  prefix-icon="el-icon-phone"></el-input>
+                    <el-input v-model="form.phone" prefix-icon="el-icon-phone"></el-input>
                 </el-form-item>
                 <el-form-item label="活动描述">
-                    <el-input type="textarea" v-model="form.description" ></el-input>
+                    <el-input type="textarea" v-model="form.description"></el-input>
                 </el-form-item>
                 <el-form-item label="活动状态">
-                    <el-input v-model="statusLabel"  prefix-icon="el-icon-info"></el-input>
+                    <el-input v-model="statusLabel" prefix-icon="el-icon-info"></el-input>
                 </el-form-item>
                 <el-form-item label="活动建议">
                     <el-input type="textarea" readonly v-model="form.message"></el-input>
@@ -61,7 +60,7 @@
         </div>
     </div>
 </template>
-  
+
 <script>
 import request from '@/utils/request';
 import { format } from 'date-fns-tz';
@@ -77,27 +76,27 @@ export default {
             // 日期表
             pickerOptionsofsearch: {
                 disabledDate(time) {
-                return time.getTime() > Date.now();
+                    return time.getTime() > Date.now();
                 },
                 shortcuts: [{
-                text: '今天',
-                onClick(picker) {
-                    picker.$emit('pick', new Date());
-                }
+                    text: '今天',
+                    onClick(picker) {
+                        picker.$emit('pick', new Date());
+                    }
                 }, {
-                text: '昨天',
-                onClick(picker) {
-                    const date = new Date();
-                    date.setTime(date.getTime() - 3600 * 1000 * 24);
-                    picker.$emit('pick', date);
-                }
+                    text: '昨天',
+                    onClick(picker) {
+                        const date = new Date();
+                        date.setTime(date.getTime() - 3600 * 1000 * 24);
+                        picker.$emit('pick', date);
+                    }
                 }, {
-                text: '一周前',
-                onClick(picker) {
-                    const date = new Date();
-                    date.setTime(date.getTime() - 3600 * 1000 * 24 * 7);
-                    picker.$emit('pick', date);
-                }
+                    text: '一周前',
+                    onClick(picker) {
+                        const date = new Date();
+                        date.setTime(date.getTime() - 3600 * 1000 * 24 * 7);
+                        picker.$emit('pick', date);
+                    }
                 }]
             },
             // 选择器
@@ -109,24 +108,24 @@ export default {
             ],
             pickerOptionsofform: {
                 shortcuts: [{
-                text: '今天',
-                onClick(picker) {
-                    picker.$emit('pick', new Date());
-                }
+                    text: '今天',
+                    onClick(picker) {
+                        picker.$emit('pick', new Date());
+                    }
                 }, {
-                text: '昨天',
-                onClick(picker) {
-                    const date = new Date();
-                    date.setTime(date.getTime() - 3600 * 1000 * 24);
-                    picker.$emit('pick', date);
-                }
+                    text: '昨天',
+                    onClick(picker) {
+                        const date = new Date();
+                        date.setTime(date.getTime() - 3600 * 1000 * 24);
+                        picker.$emit('pick', date);
+                    }
                 }, {
-                text: '一周前',
-                onClick(picker) {
-                    const date = new Date();
-                    date.setTime(date.getTime() - 3600 * 1000 * 24 * 7);
-                    picker.$emit('pick', date);
-                }
+                    text: '一周前',
+                    onClick(picker) {
+                        const date = new Date();
+                        date.setTime(date.getTime() - 3600 * 1000 * 24 * 7);
+                        picker.$emit('pick', date);
+                    }
                 }]
             },
             rules: {
@@ -201,43 +200,43 @@ export default {
         onSubmitForm() {
             this.$refs.form.validate(valid => {
                 if (valid) {
-                // 格式化时间
-                const formatTimeString = (dateString) => {
-                    if (!dateString) return '';
-                    let hours = dateString.getHours().toString().padStart(2, '0');
-                    let minutes = dateString.getMinutes().toString().padStart(2, '0');
-                    let seconds = dateString.getSeconds().toString().padStart(2, '0');
-                    let formattedTime = `${hours}:${minutes}:${seconds}`;
-                    return formattedTime;
-                };
-                // 格式化日期
-                const formatDateString = (dateString) => {
-                    if (!dateString) return '';
-                    const date = new Date(dateString);
-                    const year = date.getFullYear();
-                    const month = date.getMonth() + 1 < 10 ? '0' + (date.getMonth() + 1) : date.getMonth() + 1;
-                    const day = date.getDate() < 10 ? '0' + date.getDate() : date.getDate();
-                    return `${year}-${month}-${day}`;
-                };
-                const data = this.form;
-                data['status'] = 5;
-                data.begin = formatTimeString(data.begin);
-                data.end = formatTimeString(data.end);
-                data.date = formatDateString(data.date);
-                // 格式化截止时间
-                data.deadline = format(data.deadline, "yyyy-MM-dd'T'HH:mm:ss", { timeZone: 'Asia/BeiJing' });
-                
-                request.get(`/users/old`,data)
-                    .then(response => {
-                        if (response.code === 1) {
-                            this.$message.success(response.msg);
-                        } else {
-                            this.$message.error(response.msg);
-                        }
-                    })
-                    .catch(error => {
-                        console.error('修改失败:', error);
-                    });
+                    // 格式化时间
+                    const formatTimeString = (dateString) => {
+                        if (!dateString) return '';
+                        let hours = dateString.getHours().toString().padStart(2, '0');
+                        let minutes = dateString.getMinutes().toString().padStart(2, '0');
+                        let seconds = dateString.getSeconds().toString().padStart(2, '0');
+                        let formattedTime = `${hours}:${minutes}:${seconds}`;
+                        return formattedTime;
+                    };
+                    // 格式化日期
+                    const formatDateString = (dateString) => {
+                        if (!dateString) return '';
+                        const date = new Date(dateString);
+                        const year = date.getFullYear();
+                        const month = date.getMonth() + 1 < 10 ? '0' + (date.getMonth() + 1) : date.getMonth() + 1;
+                        const day = date.getDate() < 10 ? '0' + date.getDate() : date.getDate();
+                        return `${year}-${month}-${day}`;
+                    };
+                    const data = this.form;
+                    data['status'] = 5;
+                    data.begin = formatTimeString(data.begin);
+                    data.end = formatTimeString(data.end);
+                    data.date = formatDateString(data.date);
+                    // 格式化截止时间
+                    data.deadline = format(data.deadline, "yyyy-MM-dd'T'HH:mm:ss", { timeZone: 'Asia/BeiJing' });
+
+                    request.get(`/users/old`, data)
+                        .then(response => {
+                            if (response.code === 1) {
+                                this.$message.success(response.msg);
+                            } else {
+                                this.$message.error(response.msg);
+                            }
+                        })
+                        .catch(error => {
+                            console.error('修改失败:', error);
+                        });
                 }
             });
         },
@@ -247,28 +246,30 @@ export default {
 
 <style lang="scss" scoped>
 .pageBox {
-  display: flex;
-  justify-content: center;
-  flex-direction: column;
-  align-items: center;
-  padding: 10px;
-  .image {
-    width: 100%;
-    height: auto;
-  }
-  .content{
-    margin: 10px;
-    backdrop-filter: blur(10px);
-    border-radius: 10px;
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
-    height: auto;
-    width: 100%;
     display: flex;
-    flex-direction: column;
     justify-content: center;
+    flex-direction: column;
     align-items: center;
-    padding: 20px;
-  }
+    padding: 10px;
+
+    .image {
+        width: 100%;
+        height: auto;
+    }
+
+    .content {
+        margin: 10px;
+        backdrop-filter: blur(10px);
+        border-radius: 10px;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+        height: auto;
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        padding: 20px;
+    }
 
 }
 </style>
