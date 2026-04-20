@@ -72,6 +72,25 @@
             <artifactId>timecoin-utils</artifactId>
             <version>1.0-SNAPSHOT</version>
         </dependency>
+
+        <!-- Ethereum JSON-RPC（Hardhat 本地节点等） -->
+        <!-- 4.10+ 为 Java 17（class 61）；本项目为 Java 11，须使用 4.9.x -->
+        <dependency>
+            <groupId>org.web3j</groupId>
+            <artifactId>core</artifactId>
+            <version>4.9.8</version>
+        </dependency>
+        <!-- 与 web3j 4.9.8 一致；防止 aliyun-sdk-oss 等把 OkHttp 升到 4.12+ 导致 RequestBody.create(String,MediaType) NoSuchMethodError -->
+        <dependency>
+            <groupId>com.squareup.okhttp3</groupId>
+            <artifactId>okhttp</artifactId>
+            <version>4.9.0</version>
+        </dependency>
+        <dependency>
+            <groupId>com.squareup.okhttp3</groupId>
+            <artifactId>logging-interceptor</artifactId>
+            <version>4.9.0</version>
+        </dependency>
     </dependencies>
 
 
@@ -83,6 +102,16 @@
                 <version>${spring-boot.version}</version>
                 <type>pom</type>
                 <scope>import</scope>
+            </dependency>
+            <dependency>
+                <groupId>com.squareup.okhttp3</groupId>
+                <artifactId>okhttp</artifactId>
+                <version>4.9.0</version>
+            </dependency>
+            <dependency>
+                <groupId>com.squareup.okhttp3</groupId>
+                <artifactId>logging-interceptor</artifactId>
+                <version>4.9.0</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
