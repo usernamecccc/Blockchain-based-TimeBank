@@ -18,7 +18,7 @@
                                 <div>剩余名额：{{ row.quota }}</div>
                                 <el-progress :percentage="Number(((parseFloat(row.quota) - parseFloat(row.remain)) / parseFloat(row.quota) * 100).toFixed(1))"></el-progress>
                                 <div style="display: flex;justify-content: space-between;align-items: center;">
-                                活动日期：{{ row.date }}
+                                活动日期：{{ formatActivityDates(row) }}
                                 <el-tag size="mini" v-if="!isBeforeDeadline(row.deadline)" type="danger">报名结束</el-tag>
                                 <el-tag size="mini" v-else type="success">报名中</el-tag>
                                 </div>
@@ -62,8 +62,8 @@ export default {
     name: 'ActivityOfUser',
     data() {
         return {
-            // 搜索数据
-            searchStatus: 2,
+            // 当前筛选: joined(已报名) | ended(已结束)
+            activeTab: 'joined',
             // 卡片
             originalData: [],
             pageSize: 5, // 每页显示的条目数量
@@ -80,8 +80,27 @@ export default {
         
     },
     methods: {
+        formatActivityDates(activity) {
+            const message = activity && activity.message ? String(activity.message) : '';
+            if (message) {
+                try {
+                    const parsed = JSON.parse(message);
+                    if (parsed && Array.isArray(parsed.dates) && parsed.dates.length > 0) {
+                        return parsed.dates
+                            .map(item => String(item).split('-').pop())
+                            .map(day => `${parseInt(day, 10)}号`)
+                            .join(',');
+                    }
+                } catch (error) {
+                    // Ignore malformed legacy message
+                }
+            }
+            if (!activity || !activity.date) return '日期待定';
+            const day = String(activity.date).split('-').pop();
+            return `${parseInt(day, 10)}号`;
+        },
         load() {
-            if (this.tableData.length >= this.totalItems) {
+            if (this.originalData.length >= this.totalItems) {
                 
                 return;
             }
@@ -89,37 +108,56 @@ export default {
             this.busy = true;
 
             // 调用你的search方法来获取新的数据
-            this.search().then(() => {
-                this.currentPage++;
+            this.search().finally(() => {
                 this.busy = false;
             });
         },
         search() {
-            // 创建 URLSearchParams 对象
-            const params = new URLSearchParams();
-            // 添加搜索条件到 URLSearchParams 对象中
-            params.append('pageSize', this.pageSize);
-            params.append('page', this.currentPage);
-            params.append('status',this.searchStatus);
-            // 将 URLSearchParams 对象转换为查询字符串
-            const queryString = params.toString();
-            // 发起请求时将查询字符串添加到URL中
-            request.get(`users/vol/activity?${queryString}`)
-                .then(response => {
-                if (response.code === 1) {
-                    this.totalItems = response.data.total;
-                    this.originalData = response.data.rows;
-                    this.tableData = [];
-                    // 合并原始数据到 tableData 数组中
-                    this.tableData = [...this.tableData, ...this.originalData];
-                    
-                } else {
-                    this.$message.error(response.msg);
+            return new Promise((resolve, reject) => {
+                const params = new URLSearchParams();
+                params.append('pageSize', this.pageSize);
+                params.append('page', this.currentPage);
+                const queryString = params.toString();
+
+                request.get(`users/vol/activity?${queryString}`)
+                    .then(response => {
+                    if (response.code === 1) {
+                        this.totalItems = response.data.total;
+                        this.originalData = [...this.originalData, ...response.data.rows];
+                        this.applyTabFilter();
+                        this.currentPage++;
+                        resolve(this.tableData);
+                    } else {
+                        this.$message.error(response.msg);
+                        reject(response.msg);
+                    }
+                    })
+                    .catch(error => {
+                        console.error('获取数据失败:', error);
+                        reject(error);
+                    });
+            });
+        },
+        applyTabFilter() {
+            const now = new Date();
+            this.tableData = this.originalData.filter(row => {
+                const activityEnd = new Date(`${row.date}T${row.end}`);
+
+                if (this.activeTab === 'joined') {
+                    if (isNaN(activityEnd)) return true;
+                    return now <= activityEnd;
                 }
-                })
-                .catch(error => {
-                    console.error('获取数据失败:', error);
-                });
+
+                if (isNaN(activityEnd)) return false;
+                return now > activityEnd;
+            });
+        },
+        resetAndSearch() {
+            this.currentPage = 1;
+            this.totalItems = 0;
+            this.originalData = [];
+            this.tableData = [];
+            this.search();
         },
         handleCardClick(row) {
             // 在发送路由跳转时将数据作为查询参数传递
@@ -140,12 +178,12 @@ export default {
             return currentDate < deadlineDate;
         },
         searchBeginActivity() {
-            this.searchStatus = 2;
-            this.search();
+            this.activeTab = 'joined';
+            this.resetAndSearch();
         },
         searchEndActivity() {
-            this.searchStatus = 4;
-            this.search();
+            this.activeTab = 'ended';
+            this.resetAndSearch();
         }
     }
 }

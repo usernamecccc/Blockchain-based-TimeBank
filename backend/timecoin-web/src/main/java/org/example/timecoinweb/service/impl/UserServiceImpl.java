@@ -4,6 +4,7 @@ import com.github.pagehelper.Page;
 import com.github.pagehelper.PageHelper;
 import org.example.pojo.*;
 import org.example.timecoinweb.mapper.ActivityMapper;
+import org.example.timecoinweb.mapper.AdmiMapper;
 import org.example.timecoinweb.mapper.OldMapper;
 import org.example.timecoinweb.mapper.UserMapper;
 import org.example.timecoinweb.mapper.VolMapper;
@@ -29,6 +30,8 @@ public class UserServiceImpl implements UserService {
     @Autowired
     OldMapper oldMapper;
     @Autowired
+    AdmiMapper admiMapper;
+    @Autowired
     VolMapper volMapper;
     @Autowired
     DistanceUtils distanceUtils;
@@ -49,6 +52,13 @@ public class UserServiceImpl implements UserService {
         activity.setUpdateTime(LocalDateTime.now());
         activity.setOldId(oldId);
         activity.setStatus((short)5);
+
+        Integer administratorTableId = admiMapper.selectFirstAdministratorId();
+        if (administratorTableId == null) {
+            throw new IllegalStateException(
+                    "系统中还没有管理员账号，请先在电脑端注册并登录一名管理员后再发布活动。");
+        }
+        activity.setAdministratorId(administratorTableId);
 
         //将这个活动存入活动表
         activityMapper.insert(activity);

@@ -37,8 +37,8 @@ public class RegisterServiceImpl implements RegisterService{
         try {
             registerMapper.register(user);
         }catch (DuplicateKeyException e){
-            log.info("注册的用户名或电话或邮箱重复");
-            return "用户名或电话或邮箱重复";
+            log.info("注册的用户名重复");
+            return "用户名重复";
         }
 
 

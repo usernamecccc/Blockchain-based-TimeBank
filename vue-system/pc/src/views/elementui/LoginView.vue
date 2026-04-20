@@ -6,7 +6,7 @@
     <div class="login-container">
       <div id="login-box" class="container" :class="{ 'right-panel-active': isRightPanelActive }">
         <div class="form-container sign-up-container">
-          <form>
+          <form @submit.prevent>
             <h1>注册</h1>
             <div class="txtb">
               <input v-model="signUpUsername" type="text" placeholder="Username">
@@ -29,10 +29,7 @@
             <div class="txtb">
               <input v-model="confirmPassword" type="password" placeholder="Confirm Password">
             </div>
-            <div>
-              <el-radio v-model="radio" label="1">老人</el-radio>
-              <el-radio v-model="radio" label="2">志愿者</el-radio>
-            </div>
+            <div style="margin: 12px 0; color: #666;">账号类型：管理员</div>
             <el-button @click="signUp">注册</el-button>
             <div class="loginIcon">
               <div class="login-icon wechat"/>
@@ -42,7 +39,7 @@
           </form>
         </div>
         <div class="form-container sign-in-container">
-          <form>
+          <form @submit.prevent>
             <h1>登录</h1>
             <div style="margin-top: 20px;margin-bottom: 20px;">登陆方式</div>
             <div class="loginIcon">
@@ -56,11 +53,7 @@
             <div class="txtb" prop="signInPassword">
               <input v-model="signInPassword" type="password" placeholder="Password">
             </div>
-            <div style="margin: 12px 0;">
-              <el-radio v-model="loginRadio" label="1">老人</el-radio>
-              <el-radio v-model="loginRadio" label="2">志愿者</el-radio>
-              <el-radio v-model="loginRadio" label="3">管理员</el-radio>
-            </div>
+            <div style="margin: 12px 0; color: #666;">登录身份：管理员</div>
             <a href="#">忘记密码？</a>
             <el-button :plain="true" @click="signIn">登录</el-button>
           </form>
@@ -100,7 +93,6 @@ export default {
       signUpName: '',
       signUpPhone: '',
       age: '',
-      radio: '1',
       signInUsername: '',
       signInPassword: '',
       isLoggedIn: false // 标记用户登录状态
@@ -115,10 +107,8 @@ export default {
       this.signUpName = '';
       this.signUpPhone = '';
       this.age = '';
-      this.radio = '1';
       this.signInUsername = '';
       this.signInPassword = '';
-      this.loginRadio = '1';
     },
     togglePanel(panel) {
       this.isRightPanelActive = panel === 'signUp';
@@ -129,7 +119,7 @@ export default {
         username: this.signUpUsername,
         name: this.signUpName,
         password: this.signUpPassword,
-        role: parseInt(this.radio),
+        role: 3,
         email: this.signUpEmail,
         age: parseInt(this.age),
         phone: this.signUpPhone,
@@ -172,14 +162,13 @@ export default {
       const userData = {
         username: this.signInUsername,
         password: this.signInPassword,
-        role: parseInt(this.loginRadio, 10),
+        role: 3,
       };
 
       if (userData.username === '' || userData.password === '') {
         this.$message.error('请输入账号或密码');
         return;
       }
-
       request.post('/login', userData)
         .then(response => {
           if (response.code === 1) {

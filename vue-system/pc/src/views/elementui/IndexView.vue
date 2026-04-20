@@ -16,7 +16,7 @@
                     </div>
                 </span>
             </div>
-            <div style="color: white">管理员：{{ userInfo.username }}</div>
+            <div style="color: white">{{ roleLabel }}：{{ userInfo.username }}</div>
             <i class="el-icon-arrow-down el-icon--right"></i>
           </span>
           <el-dropdown-menu slot="dropdown">
@@ -277,6 +277,15 @@ export default {
           }
           this.activeTab = currentPath; // 更新当前激活的标签
         }
+      }
+  },
+  computed: {
+      roleLabel() {
+        const role = Number(this.userInfo && this.userInfo.role);
+        if (role === 1) return '老人';
+        if (role === 2) return '志愿者';
+        if (role === 3) return '管理员';
+        return '用户';
       }
   },
 };

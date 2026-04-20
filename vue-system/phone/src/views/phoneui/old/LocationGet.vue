@@ -65,6 +65,17 @@
       this.map?.destroy();
     },
     methods: {
+      async submitActivities(formData) {
+        const payload = { ...formData };
+        const dates = Array.isArray(payload.dates) ? payload.dates : [];
+        if (!payload.date && dates.length > 0) {
+          payload.date = dates[0];
+        }
+        const response = await request.post(`/users/old`, payload);
+        if (response.code !== 1) {
+          throw new Error(response.msg || '提交失败');
+        }
+      },
       initAMap() {
         AMapLoader.load({
           key: "cc996da095298e80e521e0df7a3d8b38", // 申请好的Web端开发者Key，首次调用 load 时必填
@@ -153,33 +164,28 @@
             console.log(e);
           });
       },
-      signIn() {
+      async signIn() {
         // 获取存储在LocalStorage中的表单数据
         let storedFormData = localStorage.getItem('form');
         // 如果LocalStorage中存在表单数据，则解析JSON字符串为对象，否则创建一个空对象
         let formData = storedFormData ? JSON.parse(storedFormData) : {};
         // 修改表单数据
         formData.address = this.address;
-
-        request.post(`/users/old`,formData)
-          .then(response => {
-          if (response.code === 1) {
-            console.log(formData);
-            // 删除LocalStorage中名为'userData'的数据
-            localStorage.removeItem('form');
-            this.$emit('next');
-            this.$message({
-                message: '活动申请成功请耐心等待审核！',
-                type: 'success'
-            });
-            this.$router.push('/endAddActivity');
-          } else {
-            this.$message.error(response.msg);
-          }
-          })
-          .catch(error => {
-            console.error('获取数据失败:', error);
+        try {
+          await this.submitActivities(formData);
+          console.log(formData);
+          // 删除LocalStorage中名为'userData'的数据
+          localStorage.removeItem('form');
+          this.$emit('next');
+          this.$message({
+              message: '活动申请成功请耐心等待审核！',
+              type: 'success'
           });
+          this.$router.push('/endAddActivity');
+        } catch (error) {
+          console.error('提交活动失败:', error);
+          this.$message.error(error.message || '提交失败');
+        }
       },
     },
   };

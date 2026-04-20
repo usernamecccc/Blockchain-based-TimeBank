@@ -11,14 +11,8 @@
         <el-form-item prop="username">
           <el-input v-model="form.username" placeholder="用户名"></el-input>
         </el-form-item>
-        <el-form-item prop="IdCard">
-          <el-input v-model="form.idCard" placeholder="身份证号"></el-input>
-        </el-form-item>
         <el-form-item prop="name">
           <el-input v-model="form.name" placeholder="姓名"></el-input>
-        </el-form-item>
-        <el-form-item prop="email">
-          <el-input v-model="form.email" placeholder="邮箱"></el-input>
         </el-form-item>
         <el-form-item prop="age">
           <el-input-number v-model="form.age" :min="0" placeholder="年龄" :style="{ width: '100%' }"></el-input-number>
@@ -126,10 +120,6 @@ export default {
       formRules: { // 表单校验规则
         username: [{ required: true, message: '请输入用户名', trigger: 'blur' }],
         role: [{ required: true, message: '请选择用户类型', trigger: 'change' }],
-        email: [
-          { required: true, message: '请输入邮箱', trigger: 'blur' },
-          { type: 'email', message: '请输入正确的邮箱格式', trigger: 'blur,change' }
-        ],
         age: [{ required: true, message: '请输入年龄', trigger: 'blur' }],
         phone: [
           { required: true, message: '请输入电话', trigger: 'blur' },
@@ -143,10 +133,6 @@ export default {
         confirmPassword: [
           { required: true, message: '请再次输入密码', trigger: 'blur' },
           { validator: this.validateConfirmPassword, trigger: 'blur' }
-        ],
-        idCard: [
-          { required: true, message: '请输入身份证号', trigger: 'blur' },
-          { pattern: /(^\d{15}$)|(^\d{18}$)|(^\d{17}(\d|X|x)$)/, message: '请输入正确的身份证号', trigger: 'blur' }
         ]
       }
     };
@@ -174,7 +160,7 @@ export default {
                 // 进行页面跳转或其他操作
                 this.clearall();
                 this.$message({
-                  message: '用户审核中，请耐心等待！',
+                  message: '注册成功，请登录',
                   type: 'success'
                 });
                 setTimeout(() => {

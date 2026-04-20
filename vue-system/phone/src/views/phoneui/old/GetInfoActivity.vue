@@ -17,12 +17,23 @@
             </el-date-picker>
           </el-form-item>
           <el-form-item prop="date">
-            <el-date-picker type="date" v-model="form.date" placeholder="活动日期"></el-date-picker>
+            <el-date-picker
+              type="dates"
+              v-model="form.dates"
+              placeholder="活动日期(可多选)">
+            </el-date-picker>
           </el-form-item>
           <el-form-item prop="begin">
               <el-time-picker
                   v-model="form.begin"
                   placeholder="活动开始时间"
+                  style="vertical-align: middle;margin-right: 20px;width: auto;">
+              </el-time-picker>
+          </el-form-item>
+          <el-form-item prop="end">
+              <el-time-picker
+                  v-model="form.end"
+                  placeholder="活动结束时间"
                   style="vertical-align: middle;margin-right: 20px;width: auto;">
               </el-time-picker>
           </el-form-item>
@@ -71,7 +82,7 @@ export default {
                 title: [{ required: true, message: '请输入活动标题', trigger: 'blur' }],
                 quota: [{ required: true, message: '请输入活动名额', trigger: 'blur' }],
                 deadline: [{ required: true, message: '请选择报名截止时间', trigger: 'change' }],
-                date: [{ required: true, message: '请选择活动日期', trigger: 'change' }],
+                dates: [{ required: true, message: '请选择活动日期(可多选)', trigger: 'change' }],
                 begin: [
                     { required: true, message: '请输入活动开始时间', trigger: 'blur' },
                     { validator: (rule, value, callback) => this.validateBeginAfterDeadline(rule, value, callback), trigger: 'blur' }
@@ -90,28 +101,16 @@ export default {
     },
     methods: {
         validateBeginAfterDeadline(rule, value, callback) {
-            // 格式化时间
-            const formatTimeString = (dateString) => {
-                if (!dateString) return '';
-                let hours = dateString.getHours().toString().padStart(2, '0');
-                let minutes = dateString.getMinutes().toString().padStart(2, '0');
-                let seconds = dateString.getSeconds().toString().padStart(2, '0');
-                let formattedTime = `${hours}:${minutes}:${seconds}`;
-                return formattedTime;
-            };
-            // 格式化日期
-            const formatDateString = (dateString) => {
-                if (!dateString) return '';
-                const date = new Date(dateString);
-                const year = date.getFullYear();
-                const month = date.getMonth() + 1 < 10 ? '0' + (date.getMonth() + 1) : date.getMonth() + 1;
-                const day = date.getDate() < 10 ? '0' + date.getDate() : date.getDate();
-                return `${year}-${month}-${day}`;
-            };
             const { form } = this; // 表单模型
-            const beginDate = new Date(formatDateString(form.date) + ' ' + formatTimeString(value)); // 构造开始日期时间对象
+            if (!value || !form.deadline || !form.dates || form.dates.length === 0) {
+                callback();
+                return;
+            }
+            const firstDate = new Date(Math.min(...form.dates.map(d => new Date(d).getTime())));
+            const beginDate = new Date(firstDate);
+            beginDate.setHours(value.getHours(), value.getMinutes(), value.getSeconds(), 0);
             if (beginDate <= form.deadline) {
-                callback(new Error('活动开始时间必须晚于报名截止时间'));
+                callback(new Error('首个活动开始时间必须晚于报名截止时间'));
             } else {
                 callback();
             }
@@ -129,10 +128,12 @@ export default {
                 return;
             }
 
-            const begin = new Date(form.begin);
-            const end = new Date(value);
+            const begin = form.begin;
+            const end = value;
 
-            if (end <= begin) {
+            const beginSeconds = begin.getHours() * 3600 + begin.getMinutes() * 60 + begin.getSeconds();
+            const endSeconds = end.getHours() * 3600 + end.getMinutes() * 60 + end.getSeconds();
+            if (endSeconds <= beginSeconds) {
                 callback(new Error('结束时间必须在开始时间之后'));
             } else {
                 callback();
@@ -162,8 +163,13 @@ export default {
                 const data = this.form;
                 data['status'] = 5;
                 data.begin = formatTimeString(data.begin);
-                data.end = '23:49:49';
-                data.date = formatDateString(data.date);
+                data.end = formatTimeString(data.end);
+                const normalizedDates = (data.dates || []).map(item => formatDateString(item)).sort();
+                data.dates = normalizedDates;
+                // 兼容后端现有 activity.date 字段：保存首个日期
+                data.date = normalizedDates[0] || '';
+                // 同一活动的多日期信息，供后续页面展示与扩展逻辑使用
+                data.message = JSON.stringify({ dates: normalizedDates });
                 data.deadline = format(data.deadline, "yyyy-MM-dd'T'HH:mm:ss", { timeZone: 'Asia/BeiJing' });
                 data.phone = "15245678901";
                 // 存储表单数据

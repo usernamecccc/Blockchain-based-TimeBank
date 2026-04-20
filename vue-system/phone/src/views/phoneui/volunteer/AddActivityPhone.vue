@@ -6,9 +6,9 @@
         </el-header>
         <el-container class="mainBox">
             <el-header class="groupBox">
-                <el-button type="text" @click="search1">报名中</el-button>
+                <el-button type="text" @click="search1">可报名</el-button>
                 <el-divider direction="vertical"></el-divider>
-                <el-button type="text" @click="search2">进行中</el-button>
+                <el-button type="text" @click="search2">已报名</el-button>
                 <el-divider direction="vertical"></el-divider>
                 <el-button type="text" @click="search3">已结束</el-button>
             </el-header>
@@ -23,7 +23,7 @@
                             <div style="font-size: 14px;">剩余名额：{{ row.quota }}</div>
                             <el-progress :percentage="Number(((parseFloat(row.quota) - parseFloat(row.remain)) / parseFloat(row.quota) * 100).toFixed(1))"></el-progress>
                             <div style="display: flex;justify-content: space-between;align-items: center;font-size: 12px;">
-                                {{ row.date }}
+                                {{ formatActivityDates(row) }}
                             <el-tag size="mini" v-if="!isBeforeDeadline(row.deadline)" type="danger">报名结束</el-tag>
                             <el-tag size="mini" v-else type="success">报名中</el-tag>
                             </div>
@@ -46,12 +46,9 @@ export default {
     data() {
         return {
             // 搜索数据
-            searchDate: '', // 活动日期
-            searchDeadline: '', // 报名截止日期
-            searchEnd: '',
-            searchBegin: '',
             searchTitle: '',
-            status: 2,
+            // 当前筛选: available(可报名) | joined(已报名) | ended(已结束)
+            activeTab: 'available',
             // 卡片
             originalData: [],
             pageSize: 5, // 每页显示的条目数量
@@ -67,8 +64,40 @@ export default {
         this.search();
     },
     methods: {
+        parseDateTime(value) {
+            if (!value) return null;
+            if (value instanceof Date) return isNaN(value.getTime()) ? null : value;
+            const normalized = String(value).replace(' ', 'T');
+            const parsed = new Date(normalized);
+            return isNaN(parsed.getTime()) ? null : parsed;
+        },
+        parseActivityTime(date, time) {
+            if (!date || !time) return null;
+            const normalized = `${date}T${String(time).split('.')[0]}`;
+            const parsed = new Date(normalized);
+            return isNaN(parsed.getTime()) ? null : parsed;
+        },
+        formatActivityDates(activity) {
+            const message = activity && activity.message ? String(activity.message) : '';
+            if (message) {
+                try {
+                    const parsed = JSON.parse(message);
+                    if (parsed && Array.isArray(parsed.dates) && parsed.dates.length > 0) {
+                        return parsed.dates
+                            .map(item => String(item).split('-').pop())
+                            .map(day => `${parseInt(day, 10)}号`)
+                            .join(',');
+                    }
+                } catch (error) {
+                    // Ignore malformed legacy message
+                }
+            }
+            if (!activity || !activity.date) return '日期待定';
+            const day = String(activity.date).split('-').pop();
+            return `${parseInt(day, 10)}号`;
+        },
         load() {
-            if (this.tableData.length >= this.totalItems) {
+            if (this.originalData.length >= this.totalItems) {
                 
                 return;
             }
@@ -76,8 +105,7 @@ export default {
             this.busy = true;
 
             // 调用你的search方法来获取新的数据
-            this.search().then(() => {
-                this.currentPage++;
+            this.search().finally(() => {
                 this.busy = false;
             });
         },
@@ -88,23 +116,22 @@ export default {
                 // 添加搜索条件到 URLSearchParams 对象中
                 params.append('pageSize', this.pageSize);
                 params.append('page', this.currentPage);
-                params.append('title',this.searchTitle);
-                params.append('deadline',this.searchDeadline);
-                params.append('date', this.searchDate);
-                params.append('begin', this.searchBegin);
-                params.append('end', this.searchEnd);
-                params.append('status', this.status);
+                if (this.searchTitle) {
+                    params.append('title', this.searchTitle);
+                }
                 // 将 URLSearchParams 对象转换为查询字符串
                 const queryString = params.toString();
+                const requestUrl = this.activeTab === 'joined'
+                    ? `users/vol/activity?${queryString}`
+                    : `/users/vol?${queryString}`;
                 // 发起请求时将查询字符串添加到URL中
-                request.get(`/users/vol?${queryString}`)
+                request.get(requestUrl)
                     .then(response => {
                         if (response.code === 1) {
                             this.totalItems = response.data.total;
-                            this.originalData = response.data.rows;
-                            
-                            // 合并原始数据到 tableData 数组中
-                            this.tableData = [...this.tableData, ...this.originalData];
+                            this.originalData = [...this.originalData, ...response.data.rows];
+                            this.applyTabFilter();
+                            this.currentPage++;
                             // 将新的数据作为Promise的结果返回
                             resolve(this.tableData);
                         } else {
@@ -114,8 +141,35 @@ export default {
                     })
                     .catch(error => {
                         console.error('获取数据失败:', error);
+                        reject(error);
                     });
             });   
+        },
+        applyTabFilter() {
+            const now = new Date();
+            this.tableData = this.originalData.filter(row => {
+                const deadline = this.parseDateTime(row.deadline);
+                const activityEnd = this.parseActivityTime(row.date, row.end);
+
+                if (this.activeTab === 'available') {
+                    // 解析失败时按“可报名”保留，避免整页被误过滤为空
+                    if (!deadline) return true;
+                    return deadline > now;
+                }
+                if (this.activeTab === 'joined') {
+                    if (!activityEnd) return true;
+                    return now <= activityEnd;
+                }
+                if (!activityEnd) return !!deadline && deadline <= now;
+                return now > activityEnd;
+            });
+        },
+        resetAndSearch() {
+            this.currentPage = 1;
+            this.totalItems = 0;
+            this.originalData = [];
+            this.tableData = [];
+            this.search();
         },
         handleCardClick(row) {
             // 在发送路由跳转时将数据作为查询参数传递
@@ -136,57 +190,19 @@ export default {
             return currentDate < deadlineDate;
         },
         search1() {
-            // 格式化截止时间
-            let currentDate = new Date();
-            let month = (currentDate.getMonth() + 1).toString().padStart(2, '0'); // 将月份格式化为两位数
-            let day = currentDate.getDate().toString().padStart(2, '0'); // 将日期格式化为两位数
-            let hours = currentDate.getHours().toString().padStart(2, '0'); // 将小时格式化为两位数
-            let minutes = currentDate.getMinutes().toString().padStart(2, '0'); // 将分钟格式化为两位数
-            let seconds = currentDate.getSeconds().toString().padStart(2, '0'); // 将秒钟格式化为两位数
-
-            this.searchDeadline = `${currentDate.getFullYear()}-${month}-${day} ${hours}:${minutes}:${seconds}`;
-            this.status = 2;
-            this.tableData = [];
-            this.search();
-            this.searchDeadline = '';
+            this.activeTab = 'available';
+            this.resetAndSearch();
         },
         search2() {
-            // 创建一个新的 Date 对象，它将自动获取当前日期和时间
-            const now = new Date();
-            // 获取当前年份
-            const year = now.getFullYear();
-            // 获取当前月份（注意：月份是从 0 开始计数的，所以要加 1）
-            const month = (now.getMonth() + 1).toString().padStart(2, '0');
-            // 获取当前日期
-            const date = now.getDate().toString().padStart(2, '0');
-            // 获取当前小时数（0-23）
-            const hours = now.getHours().toString().padStart(2, '0');
-            // 获取当前分钟数（0-59）
-            const minutes = now.getMinutes().toString().padStart(2, '0');
-            // 获取当前秒数（0-59）
-            const seconds = now.getSeconds().toString().padStart(2, '0');
-
-            // 根据需要格式化时间
-            this.searchDate = `${year}-${month}-${date}`;
-            this.searchBegin = `${hours}:${minutes}:${seconds}`;
-            this.searchEnd = `${hours}:${minutes}:${seconds}`;
-            this.status = 2;
-            this.tableData = [];
-            this.search();
-            this.searchDate = '';
-            this.searchBegin = '';
-            this.searchEnd = '';
-            
+            this.activeTab = 'joined';
+            this.resetAndSearch();
         },
         search3() {
-            this.status = 4;
-            this.tableData = [];
-            this.search();
-            
+            this.activeTab = 'ended';
+            this.resetAndSearch();
         },
         search4() {
-            this.tableData = [];
-            this.search();
+            this.resetAndSearch();
         }
     }
 }

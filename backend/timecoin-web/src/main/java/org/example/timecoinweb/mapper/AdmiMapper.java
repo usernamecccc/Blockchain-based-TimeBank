@@ -14,6 +14,10 @@ public interface AdmiMapper {
     @Select("select id from administrator where user_id=#{userId}")
     Integer selectAdministratorId(Integer userId);
 
+    /** 取任意一名管理员的 administrator 表主键 id（老人发布活动时作为归属管理员） */
+    @Select("select id from administrator order by id asc limit 1")
+    Integer selectFirstAdministratorId();
+
     /**
      * 查询管理员的用户id
      * @param id

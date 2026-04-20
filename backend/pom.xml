@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <!-- 仅作聚合，不参与各子模块的 parent 继承 -->
+    <groupId>org.example</groupId>
+    <artifactId>timecoin-backend-aggregator</artifactId>
+    <version>1.0-SNAPSHOT</version>
+    <packaging>pom</packaging>
+    <name>timecoin-backend-aggregator</name>
+    <description>在此目录执行 mvn clean install，会按顺序构建 pojo、utils、web，避免单独构建 web 时 org.example 模块未安装而到远程仓库查找失败。</description>
+
+    <modules>
+        <module>timecoin-pojo</module>
+        <module>timecoin-utils</module>
+        <module>timecoin-web</module>
+    </modules>
+</project>

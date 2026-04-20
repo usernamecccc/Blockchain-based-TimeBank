@@ -71,7 +71,7 @@
                       <div style="font-size: 14px;">剩余名额：{{ row.quota }}</div>
                       <el-progress :percentage="Number(((parseFloat(row.quota) - parseFloat(row.remain)) / parseFloat(row.quota) * 100).toFixed(1))"></el-progress>
                       <div style="display: flex;justify-content: space-between;align-items: center;font-size: 12px;">
-                        {{ row.date }}
+                        {{ formatActivityDates(row) }}
                       <el-tag size="mini" v-if="!isBeforeDeadline(row.deadline)" type="danger">报名结束</el-tag>
                       <el-tag size="mini" v-else type="success">报名中</el-tag>
                       </div>
@@ -132,6 +132,25 @@ export default {
     this.search();
   },
   methods: {
+    formatActivityDates(activity) {
+      const message = activity && activity.message ? String(activity.message) : '';
+      if (message) {
+        try {
+          const parsed = JSON.parse(message);
+          if (parsed && Array.isArray(parsed.dates) && parsed.dates.length > 0) {
+            return parsed.dates
+              .map(item => String(item).split('-').pop())
+              .map(day => `${parseInt(day, 10)}号`)
+              .join(',');
+          }
+        } catch (error) {
+          // Ignore malformed legacy message
+        }
+      }
+      if (!activity || !activity.date) return '日期待定';
+      const day = String(activity.date).split('-').pop();
+      return `${parseInt(day, 10)}号`;
+    },
     load() {
       if (this.tableData.length >= this.totalItems) {
         

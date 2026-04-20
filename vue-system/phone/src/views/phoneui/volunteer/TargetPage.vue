@@ -42,7 +42,7 @@
                 </div>
             </el-form-item>
             <el-form-item label="活动日期">
-                <el-date-picker type="date" v-model="form.date" style="width: 100%;" readonly></el-date-picker>
+                <el-input :value="formatActivityDates(form)" readonly prefix-icon="el-icon-date"></el-input>
             </el-form-item>
             <el-form-item label="活动开始时间">
                 <el-input v-model="form.begin" readonly prefix-icon="el-icon-time"></el-input>
@@ -173,6 +173,25 @@ export default {
         }
     },
     methods: {
+        formatActivityDates(activity) {
+            const message = activity && activity.message ? String(activity.message) : '';
+            if (message) {
+                try {
+                    const parsed = JSON.parse(message);
+                    if (parsed && Array.isArray(parsed.dates) && parsed.dates.length > 0) {
+                        return parsed.dates
+                            .map(item => String(item).split('-').pop())
+                            .map(day => `${parseInt(day, 10)}号`)
+                            .join(',');
+                    }
+                } catch (error) {
+                    // Ignore malformed legacy message
+                }
+            }
+            if (!activity || !activity.date) return '日期待定';
+            const day = String(activity.date).split('-').pop();
+            return `${parseInt(day, 10)}号`;
+        },
         search() {
             // 创建 URLSearchParams 对象
             const params = new URLSearchParams();
