@@ -79,3 +79,8 @@ CREATE TABLE activity_volunteer (
   CONSTRAINT fk_av_act FOREIGN KEY (activity_id) REFERENCES activity(id) ON DELETE CASCADE,
   CONSTRAINT fk_av_vol FOREIGN KEY (volunteer_id) REFERENCES volunteer(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 默认管理员（老人发布活动需要 administrator 外键；PC 端可用 admin / 123456 登录）
+INSERT INTO user (username, name, password, role, email, age, phone, create_time, update_time)
+VALUES ('admin', '系统管理员', '123456', 3, 'admin@local', 30, '13800000000', NOW(), NOW());
+INSERT INTO administrator (user_id) SELECT id FROM user WHERE username = 'admin';

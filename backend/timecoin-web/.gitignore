@@ -1,4 +1,7 @@
 HELP.md
+# 本地 H2 文件库（dev  profile），勿提交
+/data/
+
 target/
 !.mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/
