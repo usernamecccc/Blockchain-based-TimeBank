@@ -44,4 +44,11 @@ public interface UserMapper {
     //更新图片本地地址
     @Update("update user set image=#{local},update_time=now() where id=#{id}")
     void updateImage(@Param("local") String local,@Param("id") Integer id);
+
+    /**
+     * 统计各角色人数
+     * @return 包含 role 和 count 的 map 列表
+     */
+    @Select("select role, count(*) as count from user group by role")
+    List<java.util.Map<String, Object>> countUsersByRole();
 }

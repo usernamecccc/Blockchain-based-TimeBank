@@ -196,8 +196,6 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public PageBean oldSelectVolStatus(Integer id, Integer page, Integer pageSize) {
-
-
         //1.设置分页参数
         PageHelper.startPage(page, pageSize);
 
@@ -220,6 +218,33 @@ public class UserServiceImpl implements UserService {
         volActivity.setUpdateTime(LocalDateTime.now());
         //更新actVol中间表
         volMapper.update(volActivity);
+    }
+
+    @Override
+    public void updateImage(String local, Integer id) {
+        userMapper.updateImage(local, id);
+    }
+
+    @Override
+    public java.util.Map<String, Object> getUserStats() {
+        List<java.util.Map<String, Object>> roleStats = userMapper.countUsersByRole();
+        java.util.Map<String, Object> stats = new java.util.HashMap<>();
+        for (java.util.Map<String, Object> roleStat : roleStats) {
+            Object role = roleStat.get("role");
+            Object count = roleStat.get("count");
+            if (role != null) {
+                String roleKey = "";
+                switch (role.toString()) {
+                    case "1": roleKey = "elder"; break;
+                    case "2": roleKey = "volunteer"; break;
+                    case "3": roleKey = "admin"; break;
+                }
+                if (!roleKey.isEmpty()) {
+                    stats.put(roleKey, count);
+                }
+            }
+        }
+        return stats;
     }
 
     @Transactional
@@ -258,12 +283,4 @@ public class UserServiceImpl implements UserService {
 
         return volActivity;
     }
-
-    @Override
-    public void updateImage(String local,Integer id) {
-        userMapper.updateImage(local,id);
-
-    }
-
-
 }

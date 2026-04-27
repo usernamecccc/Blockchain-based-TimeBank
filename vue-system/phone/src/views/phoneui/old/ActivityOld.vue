@@ -23,7 +23,8 @@
                 <el-button round type="primary" @click="addOpen">增添活动</el-button>
             </el-header>
             <el-main class="activity">
-                <ul class="infinite-list" v-infinite-scroll="load" infinite-scroll-disabled="busy" infinite-scroll-distance="5" style="overflow:auto;padding-inline-start:0px">
+                <ul class="infinite-list" v-infinite-scroll="load" infinite-scroll-disabled="busy"
+                    infinite-scroll-distance="5" style="overflow:auto;padding-inline-start:0px">
                     <div v-for="(row, index) in tableData" :key="index" @click="handleCardClick(row)">
                         <el-card :body-style="{ padding: '0px' }" shadow="always">
                             <div class="cardContent">
@@ -31,16 +32,20 @@
                                 <div class="contentBox">
                                     <div style="font-size: 17px;">{{ row.title }}</div>
                                     <div style="font-size: 14px;">剩余名额：{{ row.remain }}</div>
-                                    <el-progress :percentage="Number(((parseFloat(row.quota) - parseFloat(row.remain)) / parseFloat(row.quota) * 100).toFixed(1))"></el-progress>
-                                    <div style="display: flex;justify-content: space-between;align-items: center;font-size: 12px;">
+                                    <el-progress
+                                        :percentage="Number(((parseFloat(row.quota) - parseFloat(row.remain)) / parseFloat(row.quota) * 100).toFixed(1))"></el-progress>
+                                    <div
+                                        style="display: flex;justify-content: space-between;align-items: center;font-size: 12px;">
                                         {{ formatActivityDates(row) }}
-                                    <el-tag size="mini" v-if="!isBeforeDeadline(row.deadline)" type="danger">报名结束</el-tag>
-                                    <el-tag size="mini" v-else type="success">报名中</el-tag>
+                                        <el-tag size="mini" v-if="!isBeforeDeadline(row.deadline)"
+                                            type="danger">报名结束</el-tag>
+                                        <el-tag size="mini" v-else type="success">报名中</el-tag>
                                     </div>
                                     <div style="font-size: 12px;">{{ row.address }}</div>
                                     <!-- 删除按钮 -->
                                     <div style="display: flex;justify-content: center;align-items: center;">
-                                        <el-button type="danger" round size="mini" @click="deleteActivity(row.id)" style="margin-top: 5px;width: 80%;">删除</el-button>
+                                        <el-button type="danger" round size="mini" @click="deleteActivity(row.id)"
+                                            style="margin-top: 5px;width: 80%;">删除</el-button>
                                     </div>
                                 </div>
                             </div>
@@ -99,7 +104,7 @@ export default {
         },
         load() {
             if (this.tableData.length >= this.totalItems) {
-                
+
                 return;
             }
             if (this.busy) return;
@@ -121,8 +126,8 @@ export default {
                 // 添加搜索条件到 URLSearchParams 对象中
                 params.append('pageSize', this.pageSize);
                 params.append('page', this.currentPage);
-                params.append('status',this.status);
-                params.append('title',this.searchTitle);
+                params.append('status', this.status);
+                params.append('title', this.searchTitle);
                 // 将 URLSearchParams 对象转换为查询字符串
                 const queryString = params.toString();
                 // 发起请求时将查询字符串添加到URL中
@@ -151,30 +156,30 @@ export default {
             ids.push(id);
             request.delete(`/users/old/${ids.join(',')}`)
                 .then(response => {
-                if(response.code === 1){
-                    this.$message.success(response.msg);
-                    this.search();
-                }
-                else{
-                    this.$message.error(response.msg);
-                }
+                    if (response.code === 1) {
+                        this.$message.success(response.msg);
+                        this.search();
+                    }
+                    else {
+                        this.$message.error(response.msg);
+                    }
                 })
                 .catch(error => {
                     console.error('There was a problem with the request:', error);
                 });
         },
         addActivity() {
-            this.$router.push({ 
+            this.$router.push({
                 name: 'GetInfoActivity',
             });
         },
         handleCardClick(row) {
             // 在发送路由跳转时将数据作为查询参数传递
-            this.$router.push({ 
-                name: 'IdActivityOld', 
-                query: { 
+            this.$router.push({
+                name: 'IdActivityOld',
+                query: {
                     id: row.id
-                } 
+                }
             });
         },
         // 判断是否在报名截止日期之前
@@ -208,7 +213,7 @@ export default {
 
 <style lang="scss" scoped>
 .addActivityBox {
-    .header{
+    .header {
         display: flex;
         justify-content: space-between;
         align-items: center;
@@ -216,38 +221,45 @@ export default {
         padding: 0px;
         margin: 5px;
     }
-    .mainBox{
-        .activity{
-          display: flex;
-          flex-direction: column;
-          justify-content: center; /* 水平居中 */
-          align-items: center; /* 垂直居中 */
-          padding: 0px;
-          .el-card{
+
+    .mainBox {
+        .activity {
             display: flex;
-            padding: 8px;
-            margin-left: 10px;
-            margin-right: 10px;
-            height: 140px;
+            flex-direction: column;
+            justify-content: center;
+            /* 水平居中 */
             align-items: center;
-            margin-bottom: 15px;
-            .cardContent{
-              display: flex;
-              justify-content: space-between;
-              align-items: center;
-              .image {
-                width: 40%;
-                display: block;
-                border-radius: 10px;
-                box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
-              }
-              .contentBox {
+            /* 垂直居中 */
+            padding: 0px;
+
+            .el-card {
+                display: flex;
                 padding: 8px;
-                width: 60%;
-              }
+                margin-left: 10px;
+                margin-right: 10px;
+                height: 140px;
+                align-items: center;
+                margin-bottom: 15px;
+
+                .cardContent {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+
+                    .image {
+                        width: 40%;
+                        display: block;
+                        border-radius: 10px;
+                        box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+                    }
+
+                    .contentBox {
+                        padding: 8px;
+                        width: 60%;
+                    }
+                }
+
             }
-            
-          } 
         }
     }
 }

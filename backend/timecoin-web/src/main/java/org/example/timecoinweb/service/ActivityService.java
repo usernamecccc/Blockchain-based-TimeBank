@@ -52,4 +52,9 @@ public interface ActivityService {
      * @return
      */
     Activity selectById(Integer id);
+    /**
+     * 获取活动统计信息
+     * @return
+     */
+    java.util.Map<String, Object> getActivityStats();
 }

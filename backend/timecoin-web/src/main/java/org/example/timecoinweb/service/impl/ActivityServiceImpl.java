@@ -88,5 +88,30 @@ public class ActivityServiceImpl implements ActivityService {
         return activityMapper.selectByActId(id);
     }
 
-
+    @Override
+    public java.util.Map<String, Object> getActivityStats() {
+        List<java.util.Map<String, Object>> statusStats = activityMapper.countActivitiesByStatus();
+        java.util.Map<String, Object> stats = new java.util.HashMap<>();
+        
+        java.util.Map<String, Object> counts = new java.util.HashMap<>();
+        for (java.util.Map<String, Object> statusStat : statusStats) {
+            Object status = statusStat.get("status");
+            Object count = statusStat.get("count");
+            if (status != null) {
+                String statusKey = "";
+                switch (status.toString()) {
+                    case "1": statusKey = "pending"; break;
+                    case "2": statusKey = "active"; break;
+                    case "3": statusKey = "rejected"; break;
+                    case "4": statusKey = "expired"; break;
+                }
+                if (!statusKey.isEmpty()) {
+                    counts.put(statusKey, count);
+                }
+            }
+        }
+        stats.put("statusDistribution", counts);
+        stats.put("totalEngagement", activityMapper.countTotalEngagement());
+        return stats;
+    }
 }

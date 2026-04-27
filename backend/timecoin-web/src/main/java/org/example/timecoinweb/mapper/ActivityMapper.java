@@ -72,4 +72,18 @@ public interface ActivityMapper {
      */
     @Select("select address from activity where id=#{id}")
     String selectAddress(Activity activity);
+
+    /**
+     * 统计各状态活动数量
+     * @return 包含 status 和 count 的 map 列表
+     */
+    @Select("select status, count(*) as count from activity group by status")
+    List<java.util.Map<String, Object>> countActivitiesByStatus();
+
+    /**
+     * 统计总参与人次 (quota - remain)
+     * @return 总参与人次
+     */
+    @Select("select coalesce(sum(quota - remain), 0) from activity")
+    Integer countTotalEngagement();
 }
