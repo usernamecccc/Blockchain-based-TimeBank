@@ -319,6 +319,8 @@ export default {
       avatar: '',
       company: '时间银行管理平台',
       departmentName: '',
+      /** 用于管理员首页拉取链上流通量 */
+      userRole: null,
       barChart: null,
       pieChart: null,
       pieSeriesData: [],
@@ -447,12 +449,34 @@ export default {
       this.dashboardLoading = true;
       try {
         await Promise.all([this.fetchDashboardStats(), this.fetchUserProfile(), this.fetchNotices()]);
+        await this.fetchChainCirculatingIfAdmin();
         this.renderBarChart();
         this.drawLine();
         this.$nextTick(() => this._resizeCharts && this._resizeCharts());
       } finally {
         this.dashboardLoading = false;
       }
+    },
+    /** 管理员首页「时间币总个数」显示链上各用户余额之和（需链已就绪） */
+    fetchChainCirculatingIfAdmin() {
+      if (Number(this.userRole) !== 3) return Promise.resolve();
+      return request
+        .get('/administrator/chain/overview?eventLimit=1')
+        .then((res) => {
+          if (res.code !== 1 || !res.data || res.data.ready === false) return;
+          const s = res.data.totalCirculating;
+          if (s == null || !this.homeData) return;
+          let n = 0;
+          try {
+            const str = String(s).trim();
+            n = parseInt(str, 10);
+            if (!Number.isFinite(n)) n = 0;
+          } catch (e) {
+            n = 0;
+          }
+          this.homeData = { ...this.homeData, coinTotal: n };
+        })
+        .catch(() => {});
     },
     fetchNotices() {
       return request
@@ -469,6 +493,7 @@ export default {
         .then(res => {
           if (res.code !== 1 || !res.data) return;
           const u = res.data;
+          this.userRole = u.role;
           this.name = u.name || u.username || '';
           this.departmentName = this.roleLabel(u.role);
           if (u.image) {
