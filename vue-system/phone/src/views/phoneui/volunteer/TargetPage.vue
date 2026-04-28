@@ -106,10 +106,11 @@ export default {
             },
             // 选择器
             options: [
-                { value: 1, label: '未审核活动' },
-                { value: 2, label: '审核同意活动' },
-                { value: 3, label: '审核不同意活动' },
-                { value: 4, label: '过期活动' },
+                { value: 1, label: '待审核' },
+                { value: 2, label: '审核通过' },
+                { value: 3, label: '进行中' },
+                { value: 4, label: '拒绝进行' },
+                { value: 5, label: '活动过期' },
             ],
             pickerOptionsofform: {
                 shortcuts: [{

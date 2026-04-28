@@ -25,7 +25,7 @@
           placeholder="活动结束时间"
           style="vertical-align: middle;margin-right: 20px;">
         </el-time-picker>
-        <el-select v-model="searchStatus" clearable placeholder="活动状态" style="width: auto;">
+        <el-select v-model="searchStatus" clearable placeholder="活动状态" style="width: auto;" @change="syncTreeHighlightFromStatus">
           <el-option
             v-for="item in options"
             :key="item.value"
@@ -33,6 +33,7 @@
             :value="item.value">
           </el-option>
         </el-select>
+        <span class="tree-hint">左侧可按状态快速筛选</span>
       </div>
       <div class="searchContainer">
         <el-button type="primary" round icon="el-icon-search" @click="search" style="height: 35px; margin-left: auto;">搜索</el-button>
@@ -53,8 +54,11 @@
           class="filter-tree"
           :data="treeData"
           :props="defaultProps"
+          node-key="id"
+          highlight-current
           default-expand-all
           :filter-node-method="filterNode"
+          @node-click="handleTreeCategoryClick"
           ref="tree">
         </el-tree>
       </div>
@@ -248,12 +252,13 @@ export default {
           }
         }]
       },
-      // 选择器
+      // 与后端一致：1待审 2审核通过 3进行中 4拒绝 5活动过期
       options: [
-        { value: 1, label: '未审核活动' },
-        { value: 2, label: '审核同意活动' },
-        { value: 3, label: '审核不同意活动' },
-        { value: 4, label: '过期活动' },
+        { value: 1, label: '待审核' },
+        { value: 2, label: '审核通过' },
+        { value: 3, label: '进行中' },
+        { value: 4, label: '拒绝进行' },
+        { value: 5, label: '活动过期' },
       ],
       // 搜索数据
       searchTitle: '', // 活动标题
@@ -268,6 +273,7 @@ export default {
       totalItems: 0, // 总条目数量
       currentPage: 1, // 当前页码
       tableData: [], // 表格数据
+      selectedIds: [],
       // 表单
       drawer: false,
       form: {},
@@ -276,49 +282,15 @@ export default {
       isFormRemainDisabled: false,
       // 树控组件
       filterText: '',
-      treeData: [{
-        id: 1,
-        label: '专业类',
-        children: [{
-          id: 4,
-          label: '医疗康复',
-        }, {
-          id: 5,
-          label: '健康管理'
-        }]
-      }, {
-        id: 2,
-        label: '非专业类',
-        children: [{
-          id: 6,
-          label: '清洁整理'
-        }, {
-          id: 7,
-          label: '购物陪同'
-        }, {
-          id: 8,
-          label: '问诊陪护'
-        }, {
-          id: 9,
-          label: '物品代购'
-        }, {
-          id: 10,
-          label: '衣服缝补'
-        }, {
-          id: 11,
-          label: '欢庆联欢'
-        }]
-      }, {
-        id: 3,
-        label: '特色类',
-        children: [{
-          id: 12,
-          label: '美容美发、运动等指导'
-        }, {
-          id: 13,
-          label: '棋牌、花茶花艺等陪伴'
-        }]
-      }],
+      // 左侧分类：与业务库中 activity.status 对应（原「专业类」等为占位，无字段支撑）
+      treeData: [
+        { id: 'all', label: '全部活动' },
+        { id: 's1', label: '待审核', status: 1 },
+        { id: 's2', label: '审核通过', status: 2 },
+        { id: 's3', label: '进行中', status: 3 },
+        { id: 's4', label: '拒绝进行', status: 4 },
+        { id: 's5', label: '活动过期', status: 5 },
+      ],
       defaultProps: {
         children: 'children',
         label: 'label'
@@ -326,10 +298,11 @@ export default {
     };
   },
   mounted() {
-    // 初始化时计算当前页的数据
     this.search();
-    // 交表的时候使用
     this.isFormItemDisabled();
+    this.$nextTick(() => {
+      if (this.$refs.tree) this.$refs.tree.setCurrentKey('all');
+    });
   },
   watch: {
     filterText(val) {
@@ -341,6 +314,46 @@ export default {
     filterNode(value, data) {
       if (!value) return true;
       return data.label.indexOf(value) !== -1;
+    },
+    /** 点击左侧分类：按活动状态筛选并请求列表 */
+    syncTreeHighlightFromStatus(val) {
+      const map = { 1: 's1', 2: 's2', 3: 's3', 4: 's4', 5: 's5' };
+      this.$nextTick(() => {
+        if (!this.$refs.tree) return;
+        const key = val === null || val === '' || val === undefined ? 'all' : (map[val] || 'all');
+        this.$refs.tree.setCurrentKey(key);
+      });
+    },
+    handleTreeCategoryClick(data) {
+      if (data.id === 'all') {
+        this.searchStatus = '';
+      } else if (typeof data.status === 'number') {
+        this.searchStatus = data.status;
+      } else {
+        return;
+      }
+      this.currentPage = 1;
+      this.search();
+      this.$nextTick(() => {
+        if (this.$refs.tree) this.$refs.tree.setCurrentKey(data.id);
+      });
+    },
+    formatSearchTimeToHMS(val) {
+      if (val == null || val === '') return '';
+      if (val instanceof Date && !isNaN(val.getTime())) {
+        const h = String(val.getHours()).padStart(2, '0');
+        const m = String(val.getMinutes()).padStart(2, '0');
+        const s = String(val.getSeconds()).padStart(2, '0');
+        return `${h}:${m}:${s}`;
+      }
+      const d = new Date(val);
+      if (!isNaN(d.getTime())) {
+        const h = String(d.getHours()).padStart(2, '0');
+        const m = String(d.getMinutes()).padStart(2, '0');
+        const s = String(d.getSeconds()).padStart(2, '0');
+        return `${h}:${m}:${s}`;
+      }
+      return '';
     },
     openDialog(description) {
       // 打开弹窗显示活动描述
@@ -371,23 +384,14 @@ export default {
         const day = date.getDate() < 10 ? '0' + date.getDate() : date.getDate();
         return `${year}-${month}-${day}`;
       };
-      // 格式化时间
-      const formatTimeString = (dateString) => {
-        if (!dateString) return '';
-        let hours = dateString.getHours().toString().padStart(2, '0');
-        let minutes = dateString.getMinutes().toString().padStart(2, '0');
-        let seconds = dateString.getSeconds().toString().padStart(2, '0');
-        let formattedTime = `${hours}:${minutes}:${seconds}`;
-        return formattedTime;
-      };
       // 创建 URLSearchParams 对象
       const params = new URLSearchParams();
       // 添加搜索条件到 URLSearchParams 对象中
       params.append('title', this.searchTitle);
       params.append('address', this.searchAddress);
       params.append('date', formatDateString(this.searchDate));
-      params.append('begin', formatTimeString(this.searchBegin));
-      params.append('end', formatTimeString(this.searchEnd));
+      params.append('begin', this.formatSearchTimeToHMS(this.searchBegin));
+      params.append('end', this.formatSearchTimeToHMS(this.searchEnd));
       params.append('status', this.searchStatus);
       params.append('pageSize', this.pageSize);
       params.append('page', this.currentPage);
@@ -412,13 +416,17 @@ export default {
         });
     },
     clearSearch() {
-      // 在这个方法中清空搜索框中的数据
       this.searchTitle = '';
       this.searchAddress = '';
       this.searchDate = '';
-      this.searchBegin = '',
-      this.searchEnd = '',
+      this.searchBegin = '';
+      this.searchEnd = '';
       this.searchStatus = '';
+      this.currentPage = 1;
+      this.search();
+      this.$nextTick(() => {
+        if (this.$refs.tree) this.$refs.tree.setCurrentKey('all');
+      });
     },
     // 不同标签
     getTagType(status) {
@@ -428,8 +436,10 @@ export default {
         case 2:
           return 'success';
         case 3:
-          return 'danger';
+          return 'primary';
         case 4:
+          return 'danger';
+        case 5:
           return 'info';
         default:
           return '';
@@ -438,13 +448,15 @@ export default {
     getTagText(status) {
       switch (status) {
         case 1:
-          return '未审核';
+          return '待审核';
         case 2:
           return '审核通过';
         case 3:
-          return '审核不通过';
+          return '进行中';
         case 4:
-          return '过期活动';
+          return '拒绝进行';
+        case 5:
+          return '活动过期';
         default:
           return '';
       }
@@ -589,6 +601,12 @@ export default {
   display: flex;
   flex-direction: row;
 }
+.tree-hint {
+  margin-left: 12px;
+  font-size: 12px;
+  color: #909399;
+  white-space: nowrap;
+}
 .left{
   width: 18%;
   border-right: 1px solid #ccc;
@@ -596,6 +614,10 @@ export default {
   border-radius: 20px;
   background-color: #fff;
   margin-right: 20px;
+}
+.left ::v-deep .el-tree-node.is-current > .el-tree-node__content {
+  background-color: #ecf5ff;
+  color: #409eff;
 }
 .right{
   width: 80%;

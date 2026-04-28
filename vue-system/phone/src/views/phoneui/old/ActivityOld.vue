@@ -8,13 +8,15 @@
             </el-result>
         </el-dialog>
         <el-header class="header">
-            <el-button type="text" @click="search1" style="margin-left: 50px;">未审核</el-button>
+            <el-button type="text" @click="search1" style="margin-left: 20px;">待审核</el-button>
             <el-divider direction="vertical"></el-divider>
             <el-button type="text" @click="search2">审核通过</el-button>
             <el-divider direction="vertical"></el-divider>
-            <el-button type="text" @click="search3">审核不通过</el-button>
+            <el-button type="text" @click="search3">进行中</el-button>
             <el-divider direction="vertical"></el-divider>
-            <el-button type="text" @click="search4" style="margin-right: 50px;">过期活动</el-button>
+            <el-button type="text" @click="search4">拒绝</el-button>
+            <el-divider direction="vertical"></el-divider>
+            <el-button type="text" @click="search5" style="margin-right: 20px;">已过期</el-button>
         </el-header>
         <el-container class="mainBox">
             <el-header style="display: flex;justify-content: space-between;align-items: center;">
@@ -73,7 +75,7 @@ export default {
             currentPage: 1, // 当前页码
             tableData: [], // 表格数据
             searchTitle: '', // 搜索文本
-            status: 2, // 状态,默认为审核通过
+            status: 2, // 筛选用 status（接口若未接筛选则仅前端预留）
             // 无限滚动
             busy: false,
         }
@@ -205,6 +207,10 @@ export default {
         },
         search4() {
             this.status = 4;
+            this.search();
+        },
+        search5() {
+            this.status = 5;
             this.search();
         },
     }

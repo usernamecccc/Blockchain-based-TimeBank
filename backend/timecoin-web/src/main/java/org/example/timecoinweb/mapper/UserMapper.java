@@ -49,6 +49,7 @@ public interface UserMapper {
      * 统计各角色人数
      * @return 包含 role 和 count 的 map 列表
      */
-    @Select("select role, count(*) as count from user group by role")
+    /** 明确别名，避免 JDBC/MyBatis 在部分环境下将列名映射为大写或 count 保留字导致取不到键 */
+    @Select("SELECT role AS user_role, COUNT(*) AS role_cnt FROM `user` GROUP BY role")
     List<java.util.Map<String, Object>> countUsersByRole();
 }

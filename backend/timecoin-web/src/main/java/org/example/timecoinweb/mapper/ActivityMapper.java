@@ -53,10 +53,17 @@ public interface ActivityMapper {
     Activity selectByActId(@Param("activityId") Integer activityId);
 
     /**
-     *将过期活动状态更新为4
+     * 活动已结束：审核通过(2)或进行中(3) → 已过期(5)
      */
-    @Update("update activity set status=4 where concat(date,' ',end)<now() and status!=4")
-    void updateExpired();
+    @Update("UPDATE activity SET status = 5 WHERE status IN (2, 3) AND CONCAT(`date`, ' ', `end`) < NOW()")
+    void markActivitiesExpired();
+
+    /**
+     * 已到开始时间且尚未结束：审核通过(2) → 进行中(3)
+     */
+    @Update("UPDATE activity SET status = 3 WHERE status = 2 "
+            + "AND CONCAT(`date`, ' ', `begin`) <= NOW() AND CONCAT(`date`, ' ', `end`) >= NOW()")
+    void promoteApprovedToOngoing();
 
     /**
      * remain剩余报名名额+1
@@ -77,7 +84,7 @@ public interface ActivityMapper {
      * 统计各状态活动数量
      * @return 包含 status 和 count 的 map 列表
      */
-    @Select("select status, count(*) as count from activity group by status")
+    @Select("SELECT status AS act_status, COUNT(*) AS status_cnt FROM activity GROUP BY status")
     List<java.util.Map<String, Object>> countActivitiesByStatus();
 
     /**

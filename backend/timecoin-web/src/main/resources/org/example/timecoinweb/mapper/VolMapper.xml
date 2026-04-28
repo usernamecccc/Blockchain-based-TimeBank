@@ -103,9 +103,14 @@
             <if test="end!=null">
                 and end &lt;= #{end}
             </if>
-            <if test="status!=null">
-                and status = #{status}
-            </if>
+            <choose>
+                <when test="status != null">
+                    and status = #{status}
+                </when>
+                <otherwise>
+                    and status in (2, 3)
+                </otherwise>
+            </choose>
             <if test="address!=null and address!=''">
                 and address like concat('%',#{address},'%')
             </if>

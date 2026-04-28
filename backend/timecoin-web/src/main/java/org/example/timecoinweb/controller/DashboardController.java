@@ -3,10 +3,12 @@ package org.example.timecoinweb.controller;
 import lombok.extern.slf4j.Slf4j;
 import org.example.pojo.Result;
 import org.example.timecoinweb.service.ActivityService;
+import org.example.timecoinweb.service.NoticeService;
 import org.example.timecoinweb.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.HashMap;
@@ -26,6 +28,9 @@ public class DashboardController {
     @Autowired
     private ActivityService activityService;
 
+    @Autowired
+    private NoticeService noticeService;
+
     /**
      * 获取首页统计数据
      * @return 汇总后的统计结果
@@ -42,5 +47,13 @@ public class DashboardController {
         responseData.put("activityStats", activityService.getActivityStats());
         
         return Result.success(responseData);
+    }
+
+    /**
+     * 首页通知公告（无需登录，与 /dashboard/stats 同属 dashboard 白名单）
+     */
+    @GetMapping("/notices")
+    public Result listNotices(@RequestParam(defaultValue = "30") int limit) {
+        return Result.success(noticeService.listRecent(limit));
     }
 }

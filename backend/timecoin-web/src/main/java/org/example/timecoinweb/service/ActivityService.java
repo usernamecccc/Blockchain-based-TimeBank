@@ -44,7 +44,8 @@ public interface ActivityService {
     /**
      * 将过期的活动状态设为4（已过期）
      */
-    void updateExpired();
+    /** 按活动日期时间刷新：先标记过期，再将已到点的「审核通过」升为「进行中」 */
+    void refreshActivityLifecycle();
 
     /**
      * 根据id查询活动信息
