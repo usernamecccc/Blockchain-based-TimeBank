@@ -6,6 +6,7 @@ import org.example.pojo.Activity;
 import org.example.pojo.PageBean;
 import org.example.timecoinweb.mapper.ActivityMapper;
 import org.example.timecoinweb.mapper.AdmiMapper;
+import org.example.timecoinweb.mapper.OldMapper;
 import org.example.timecoinweb.mapper.VolMapper;
 import org.example.timecoinweb.service.ActivityService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -16,9 +17,21 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.List;
+import java.util.Map;
 
 @Service
 public class ActivityServiceImpl implements ActivityService {
+
+    private static Object mapGetIgnoreCase(Map<String, Object> row, String... keyCandidates) {
+        for (String want : keyCandidates) {
+            for (Map.Entry<String, Object> e : row.entrySet()) {
+                if (e.getKey() != null && e.getKey().equalsIgnoreCase(want)) {
+                    return e.getValue();
+                }
+            }
+        }
+        return null;
+    }
 
     @Autowired
     ActivityMapper activityMapper;
@@ -26,6 +39,27 @@ public class ActivityServiceImpl implements ActivityService {
     VolMapper volMapper;
     @Autowired
     AdmiMapper admiMapper;
+    @Autowired
+    OldMapper oldMapper;
+
+    /**
+     * 前端「老人ID」通常填 user.id；库中外键 activity.old_id 引用的是 old.id。
+     * 若传入值已是 old 表主键则保持不变；否则按 user_id 查 old.id。
+     */
+    private void resolveOldIdForActivity(Activity activity) {
+        int raw = activity.getOldId();
+        if (oldMapper.selectUserId(raw) != null) {
+            return;
+        }
+        Integer oldPk = oldMapper.selectOldId(raw);
+        if (oldPk != null) {
+            activity.setOldId(oldPk);
+            return;
+        }
+        throw new IllegalStateException(
+                "老人ID无效：请填写已在系统中注册的老人「用户ID」（用户管理中对应用户的 id），"
+                        + "或老人档案表主键 old.id。若尚无老人用户，请先在用户管理中添加角色为老人的账号。");
+    }
 
 
     @Override
@@ -61,6 +95,7 @@ public class ActivityServiceImpl implements ActivityService {
 
         activity.setUpdateTime(LocalDateTime.now());
 
+        resolveOldIdForActivity(activity);
         activityMapper.update(activity);
     }
 
@@ -75,12 +110,14 @@ public class ActivityServiceImpl implements ActivityService {
         activity.setUpdateTime(LocalDateTime.now());
         activity.setRemain(activity.getQuota());
 
+        resolveOldIdForActivity(activity);
         activityMapper.insert(activity);
     }
 
     @Override
-    public void updateExpired() {
-        activityMapper.updateExpired();
+    public void refreshActivityLifecycle() {
+        activityMapper.markActivitiesExpired();
+        activityMapper.promoteApprovedToOngoing();
     }
 
     @Override
@@ -95,18 +132,25 @@ public class ActivityServiceImpl implements ActivityService {
         
         java.util.Map<String, Object> counts = new java.util.HashMap<>();
         for (java.util.Map<String, Object> statusStat : statusStats) {
-            Object status = statusStat.get("status");
-            Object count = statusStat.get("count");
+            Object status = mapGetIgnoreCase(statusStat, "act_status", "status");
+            Object count = mapGetIgnoreCase(statusStat, "status_cnt", "count");
             if (status != null) {
                 String statusKey = "";
                 switch (status.toString()) {
                     case "1": statusKey = "pending"; break;
-                    case "2": statusKey = "active"; break;
-                    case "3": statusKey = "rejected"; break;
-                    case "4": statusKey = "expired"; break;
+                    case "2": statusKey = "approved"; break;
+                    case "3": statusKey = "ongoing"; break;
+                    case "4": statusKey = "rejected"; break;
+                    case "5": statusKey = "expired"; break;
                 }
                 if (!statusKey.isEmpty()) {
-                    counts.put(statusKey, count);
+                    long n = 0;
+                    if (count instanceof Number) {
+                        n = ((Number) count).longValue();
+                    } else if (count != null) {
+                        n = Long.parseLong(count.toString());
+                    }
+                    counts.put(statusKey, n);
                 }
             }
         }

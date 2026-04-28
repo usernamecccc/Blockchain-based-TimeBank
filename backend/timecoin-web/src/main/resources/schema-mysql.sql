@@ -47,6 +47,7 @@ CREATE TABLE IF NOT EXISTS activity (
   old_id INT NOT NULL,
   phone VARCHAR(32) DEFAULT NULL,
   description TEXT,
+  -- status: 1待审核 2审核通过 3进行中 4拒绝 5活动过期
   status SMALLINT NOT NULL DEFAULT 1,
   administrator_id INT NOT NULL,
   create_time DATETIME DEFAULT NULL,
@@ -55,6 +56,14 @@ CREATE TABLE IF NOT EXISTS activity (
   remain SMALLINT NOT NULL DEFAULT 0,
   CONSTRAINT fk_act_old FOREIGN KEY (old_id) REFERENCES old(id),
   CONSTRAINT fk_act_admi FOREIGN KEY (administrator_id) REFERENCES administrator(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS notice (
+  id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  title VARCHAR(255) NOT NULL DEFAULT '',
+  content TEXT NOT NULL,
+  create_time DATETIME DEFAULT NULL,
+  INDEX idx_notice_create_time (create_time)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS activity_volunteer (

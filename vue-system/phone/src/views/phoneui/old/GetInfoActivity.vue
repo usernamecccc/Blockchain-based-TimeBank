@@ -150,7 +150,6 @@ export default {
                         return `${year}-${month}-${day}`;
                     };
                     const data = this.form;
-                    data['status'] = 5;
                     data.begin = formatTimeString(data.begin);
                     data.end = formatTimeString(data.end);
                     const normalizedDates = (data.dates || []).map(item => formatDateString(item)).sort();

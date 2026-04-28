@@ -20,6 +20,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.List;
+import java.util.Map;
 
 @Service
 public class UserServiceImpl implements UserService {
@@ -51,8 +52,6 @@ public class UserServiceImpl implements UserService {
         activity.setCreateTime(LocalDateTime.now());
         activity.setUpdateTime(LocalDateTime.now());
         activity.setOldId(oldId);
-        activity.setStatus((short)5);
-
         Integer administratorTableId = admiMapper.selectFirstAdministratorId();
         if (administratorTableId == null) {
             throw new IllegalStateException(
@@ -225,13 +224,25 @@ public class UserServiceImpl implements UserService {
         userMapper.updateImage(local, id);
     }
 
+    /** 兼容 MyBatis Map 键名大小写不一致（如 ROLE / role） */
+    private static Object mapGetIgnoreCase(Map<String, Object> row, String... keyCandidates) {
+        for (String want : keyCandidates) {
+            for (Map.Entry<String, Object> e : row.entrySet()) {
+                if (e.getKey() != null && e.getKey().equalsIgnoreCase(want)) {
+                    return e.getValue();
+                }
+            }
+        }
+        return null;
+    }
+
     @Override
     public java.util.Map<String, Object> getUserStats() {
         List<java.util.Map<String, Object>> roleStats = userMapper.countUsersByRole();
         java.util.Map<String, Object> stats = new java.util.HashMap<>();
         for (java.util.Map<String, Object> roleStat : roleStats) {
-            Object role = roleStat.get("role");
-            Object count = roleStat.get("count");
+            Object role = mapGetIgnoreCase(roleStat, "user_role", "role");
+            Object count = mapGetIgnoreCase(roleStat, "role_cnt", "count");
             if (role != null) {
                 String roleKey = "";
                 switch (role.toString()) {
@@ -240,7 +251,13 @@ public class UserServiceImpl implements UserService {
                     case "3": roleKey = "admin"; break;
                 }
                 if (!roleKey.isEmpty()) {
-                    stats.put(roleKey, count);
+                    long n = 0;
+                    if (count instanceof Number) {
+                        n = ((Number) count).longValue();
+                    } else if (count != null) {
+                        n = Long.parseLong(count.toString());
+                    }
+                    stats.put(roleKey, n);
                 }
             }
         }

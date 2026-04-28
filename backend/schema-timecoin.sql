@@ -6,6 +6,7 @@ CREATE DATABASE IF NOT EXISTS timecoin DEFAULT CHARACTER SET utf8mb4 COLLATE utf
 USE timecoin;
 
 DROP TABLE IF EXISTS activity_volunteer;
+DROP TABLE IF EXISTS notice;
 DROP TABLE IF EXISTS activity;
 DROP TABLE IF EXISTS volunteer;
 DROP TABLE IF EXISTS old;
@@ -65,6 +66,14 @@ CREATE TABLE activity (
   remain SMALLINT NOT NULL DEFAULT 0,
   CONSTRAINT fk_act_old FOREIGN KEY (old_id) REFERENCES old(id),
   CONSTRAINT fk_act_admi FOREIGN KEY (administrator_id) REFERENCES administrator(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE notice (
+  id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  title VARCHAR(255) NOT NULL DEFAULT '',
+  content TEXT NOT NULL,
+  create_time DATETIME DEFAULT NULL,
+  INDEX idx_notice_create_time (create_time)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE activity_volunteer (

@@ -60,6 +60,14 @@ CREATE TABLE IF NOT EXISTS activity (
   CONSTRAINT fk_act_admi FOREIGN KEY (administrator_id) REFERENCES administrator(id)
 );
 
+CREATE TABLE IF NOT EXISTS notice (
+  id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  title VARCHAR(255) NOT NULL DEFAULT '',
+  content CLOB NOT NULL,
+  create_time TIMESTAMP DEFAULT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_notice_create_time ON notice(create_time);
+
 CREATE TABLE IF NOT EXISTS activity_volunteer (
   id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
   activity_id INT NOT NULL,

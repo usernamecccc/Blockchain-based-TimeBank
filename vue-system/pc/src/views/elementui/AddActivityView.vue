@@ -10,7 +10,7 @@
           <el-input-number v-model="form.quota" :min="1" placeholder="活动名额"></el-input-number>
         </el-form-item>
         <el-form-item prop="oldId">
-          <el-input v-model="form.oldId" placeholder="老人ID"></el-input>
+          <el-input v-model="form.oldId" placeholder="老人用户ID（user.id，非任意数字）"></el-input>
         </el-form-item>
         <el-form-item prop="deadline">
           <el-date-picker
@@ -72,10 +72,11 @@ export default {
     return {
       form: {},
       options: [
-        { value: 1, label: '未审核活动' },
-        { value: 2, label: '审核同意活动' },
-        { value: 3, label: '审核不同意活动' },
-        { value: 4, label: '过期活动' },
+        { value: 1, label: '待审核' },
+        { value: 2, label: '审核通过' },
+        { value: 3, label: '进行中' },
+        { value: 4, label: '拒绝进行' },
+        { value: 5, label: '活动过期' },
       ],
       pickerOptionsofform: {
         shortcuts: [{
@@ -124,28 +125,54 @@ export default {
     };
   },
   methods: {
+    /** el-time-picker 多为 Date，也可能为字符串；统一成 HH:mm:ss */
+    formatPickerTimeToHMS(val) {
+      if (val == null || val === '') return '';
+      if (val instanceof Date && !isNaN(val.getTime())) {
+        const h = String(val.getHours()).padStart(2, '0');
+        const m = String(val.getMinutes()).padStart(2, '0');
+        const s = String(val.getSeconds()).padStart(2, '0');
+        return `${h}:${m}:${s}`;
+      }
+      const d = new Date(val);
+      if (!isNaN(d.getTime())) {
+        const h = String(d.getHours()).padStart(2, '0');
+        const m = String(d.getMinutes()).padStart(2, '0');
+        const s = String(d.getSeconds()).padStart(2, '0');
+        return `${h}:${m}:${s}`;
+      }
+      if (typeof val === 'string') {
+        const m = val.trim().match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?/);
+        if (m) {
+          return `${m[1].padStart(2, '0')}:${m[2]}:${(m[3] || '00').padStart(2, '0')}`;
+        }
+      }
+      return '';
+    },
+    formatPickerDateToYMD(val) {
+      if (!val) return '';
+      const date = val instanceof Date ? val : new Date(val);
+      if (isNaN(date.getTime())) return '';
+      const y = date.getFullYear();
+      const mo = String(date.getMonth() + 1).padStart(2, '0');
+      const da = String(date.getDate()).padStart(2, '0');
+      return `${y}-${mo}-${da}`;
+    },
     validateBeginAfterDeadline(rule, value, callback) {
-        // 格式化时间
-        const formatTimeString = (dateString) => {
-            if (!dateString) return '';
-            let hours = dateString.getHours().toString().padStart(2, '0');
-            let minutes = dateString.getMinutes().toString().padStart(2, '0');
-            let seconds = dateString.getSeconds().toString().padStart(2, '0');
-            let formattedTime = `${hours}:${minutes}:${seconds}`;
-            return formattedTime;
-        };
-        // 格式化日期
-        const formatDateString = (dateString) => {
-            if (!dateString) return '';
-            const date = new Date(dateString);
-            const year = date.getFullYear();
-            const month = date.getMonth() + 1 < 10 ? '0' + (date.getMonth() + 1) : date.getMonth() + 1;
-            const day = date.getDate() < 10 ? '0' + date.getDate() : date.getDate();
-            return `${year}-${month}-${day}`;
-        };
-        const { form } = this; // 表单模型
-        const beginDate = new Date(formatDateString(form.date) + ' ' + formatTimeString(value)); // 构造开始日期时间对象
-        if (beginDate <= form.deadline) {
+        const { form } = this;
+        const dateStr = this.formatPickerDateToYMD(form.date);
+        const hms = this.formatPickerTimeToHMS(value);
+        if (!dateStr || !hms || !form.deadline) {
+          callback();
+          return;
+        }
+        const beginDt = new Date(`${dateStr} ${hms}`);
+        const deadlineDt = form.deadline instanceof Date ? form.deadline : new Date(form.deadline);
+        if (isNaN(beginDt.getTime()) || isNaN(deadlineDt.getTime())) {
+          callback();
+          return;
+        }
+        if (beginDt.getTime() <= deadlineDt.getTime()) {
             callback(new Error('活动开始时间必须晚于报名截止时间'));
         } else {
             callback();
@@ -177,29 +204,11 @@ export default {
       this.$refs.form.validate(valid => {
         if (valid) {
           this.form.end = '23:59:59';
-          const data = this.form;
-          // 格式化时间
-          const formatTimeString = (dateString) => {
-              if (!dateString) return '';
-              let hours = dateString.getHours().toString().padStart(2, '0');
-              let minutes = dateString.getMinutes().toString().padStart(2, '0');
-              let seconds = dateString.getSeconds().toString().padStart(2, '0');
-              let formattedTime = `${hours}:${minutes}:${seconds}`;
-              return formattedTime;
-          };
-          // 格式化日期
-          const formatDateString = (dateString) => {
-              if (!dateString) return '';
-              const date = new Date(dateString);
-              const year = date.getFullYear();
-              const month = date.getMonth() + 1 < 10 ? '0' + (date.getMonth() + 1) : date.getMonth() + 1;
-              const day = date.getDate() < 10 ? '0' + date.getDate() : date.getDate();
-              return `${year}-${month}-${day}`;
-          };
+          const data = { ...this.form };
           // 格式化截止时间
           data.deadline = format(data.deadline, "yyyy-MM-dd'T'HH:mm:ss", { timeZone: 'Asia/Shanghai' });
-          data.date = formatDateString(data.date);
-          data.begin = formatTimeString(data.begin);
+          data.date = this.formatPickerDateToYMD(data.date);
+          data.begin = this.formatPickerTimeToHMS(data.begin);
           
           request.post('/administrator', data)
             .then(response => {

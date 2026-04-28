@@ -70,8 +70,7 @@ public class UserController {
 
 
     /**
-     * 用户（老人）对志愿活动的编辑（默认status为5，代表未发布）
-     * 如果老人发布任务就把，status改为1（代表未审核）
+     * 用户（老人）对志愿活动的编辑；提交审核请使用 status=1（待审核）
      * @param activity
      * @return
      */

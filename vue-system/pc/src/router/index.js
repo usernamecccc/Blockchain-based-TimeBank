@@ -75,6 +75,11 @@ const routes = [
         component: CoinView,
         
       },
+      {
+        path: '/noticeManageView',
+        name: 'NoticeManageView',
+        component: () => import('@/views/elementui/NoticeManageView.vue'),
+      },
     ]
   },
 ]
