@@ -3,6 +3,7 @@ package org.example.timecoinweb.controller;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.example.pojo.Result;
+import org.example.timecoinweb.service.TimeCoinChainAdminService;
 import org.example.timecoinweb.service.TimeCoinChainService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
@@ -21,6 +22,20 @@ public class ChainController {
 
     @Autowired
     private TimeCoinChainService timeCoinChainService;
+
+    @Autowired
+    private TimeCoinChainAdminService timeCoinChainAdminService;
+
+    /**
+     * 时间币管理页：链状态、各用户链上余额、最近 Mint/Transfer 事件。
+     *
+     * @param eventLimit 最多返回事件条数（1–500）
+     */
+    @GetMapping("/overview")
+    public Result overview(@RequestParam(defaultValue = "100") int eventLimit) {
+        int lim = Math.max(1, Math.min(eventLimit, 500));
+        return Result.success(timeCoinChainAdminService.overview(lim));
+    }
 
     @GetMapping("/status")
     public Result status() {
