@@ -2,20 +2,24 @@ package org.example.timecoinweb.service.impl;
 
 import com.github.pagehelper.Page;
 import com.github.pagehelper.PageHelper;
+import lombok.extern.slf4j.Slf4j;
 import org.example.pojo.*;
+import org.example.timecoinweb.config.BlockchainProperties;
 import org.example.timecoinweb.mapper.ActivityMapper;
 import org.example.timecoinweb.mapper.AdmiMapper;
 import org.example.timecoinweb.mapper.OldMapper;
 import org.example.timecoinweb.mapper.UserMapper;
 import org.example.timecoinweb.mapper.VolMapper;
-import org.example.timecoinweb.service.ActivityService;
+import org.example.timecoinweb.service.TimeCoinChainService;
 import org.example.timecoinweb.service.UserService;
 import org.example.utils.DistanceUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataAccessException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
+import java.math.BigInteger;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -23,6 +27,7 @@ import java.util.List;
 import java.util.Map;
 
 @Service
+@Slf4j
 public class UserServiceImpl implements UserService {
     @Autowired
     ActivityMapper activityMapper;
@@ -36,6 +41,10 @@ public class UserServiceImpl implements UserService {
     VolMapper volMapper;
     @Autowired
     DistanceUtils distanceUtils;
+    @Autowired
+    BlockchainProperties blockchainProperties;
+    @Autowired
+    TimeCoinChainService timeCoinChainService;
 
     /**
      * 老人增加活动
@@ -59,8 +68,41 @@ public class UserServiceImpl implements UserService {
         }
         activity.setAdministratorId(administratorTableId);
 
+        chargePublishFeeOnChain(userId);
+
         //将这个活动存入活动表
         activityMapper.insert(activity);
+    }
+
+    /**
+     * 链上扣除发布活动所需时间币（合约 owner 代签 transfer）；未启用链或配置费用为 0 则跳过。
+     */
+    private void chargePublishFeeOnChain(Integer userId) {
+        if (!blockchainProperties.isEnabled() || !timeCoinChainService.isChainReady()) {
+            return;
+        }
+        BigInteger cost = blockchainProperties.getOldPublishActivityCost();
+        if (cost == null || cost.signum() <= 0) {
+            return;
+        }
+        String from = String.valueOf(userId);
+        String to = blockchainProperties.getFeeRecipientUserId();
+        if (!StringUtils.hasText(to)) {
+            to = "platform";
+        }
+        try {
+            BigInteger bal = timeCoinChainService.balanceOf(from);
+            if (bal.compareTo(cost) < 0) {
+                throw new IllegalStateException(
+                        "时间币余额不足：发布活动需要 " + cost + "，当前余额 " + bal);
+            }
+            timeCoinChainService.transfer(from, to, cost);
+        } catch (IllegalStateException e) {
+            throw e;
+        } catch (Exception e) {
+            log.warn("老人发布活动链上扣费失败 userId={}", userId, e);
+            throw new IllegalStateException("链上扣除时间币失败：" + e.getMessage());
+        }
     }
 
     /**

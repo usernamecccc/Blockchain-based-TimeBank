@@ -1,7 +1,7 @@
 <template>
     <div class="addActivityBox">
         <el-dialog :visible.sync="dialogVisible" title="增添活动">
-            <el-result icon="warning" title="是否确认" subTitle="该活动需要消耗200时间币">
+            <el-result icon="warning" title="是否确认" :subTitle="publishFeeHint">
                 <template slot="extra">
                     <el-button type="primary" size="medium" @click="addActivity">确 定</el-button>
                 </template>
@@ -76,15 +76,34 @@ export default {
             tableData: [], // 表格数据
             searchTitle: '', // 搜索文本
             status: 2, // 筛选用 status（接口若未接筛选则仅前端预留）
+            publishFeeHint: '加载规则中…',
             // 无限滚动
             busy: false,
         }
     },
     mounted() {
+        this.fetchPublishFee();
         // 初始化时计算当前页的数据
         this.search();
     },
     methods: {
+        fetchPublishFee() {
+            request.get('/info/publishActivityFee')
+                .then(res => {
+                    if (res.code === 1 && res.data) {
+                        if (res.data.deductEnabled) {
+                            this.publishFeeHint = `确认后将进入填写流程；发布成功时链上将扣除 ${res.data.cost} 时间币`;
+                        } else {
+                            this.publishFeeHint = '确认后将进入填写流程（当前未启用链上扣费）';
+                        }
+                    } else {
+                        this.publishFeeHint = '确认后将进入填写流程';
+                    }
+                })
+                .catch(() => {
+                    this.publishFeeHint = '确认后将进入填写流程';
+                });
+        },
         formatActivityDates(activity) {
             const message = activity && activity.message ? String(activity.message) : '';
             if (message) {

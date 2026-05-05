@@ -1,7 +1,7 @@
 <template>
   <div>
     <el-dialog :visible.sync="dialogVisible" title="增添活动" :append-to-body="true" :modal-append-to-body="false">
-      <el-result icon="warning" title="是否确认" subTitle="该活动预估消耗4个时间币">
+      <el-result icon="warning" title="是否确认" :subTitle="publishFeeHint">
         <template slot="extra">
           <el-button type="primary" size="medium" @click="signIn">确 定</el-button>
         </template>
@@ -44,12 +44,14 @@ export default {
   data() {
     return {
       dialogVisible: false,
+      publishFeeHint: '加载规则中…',
       map: null,
       address: "",
       keyword: "",
     };
   },
   mounted() {
+    this.fetchPublishFee();
     const securityScript = document.createElement("script");
     securityScript.type = "text/javascript";
     securityScript.innerHTML = `
@@ -64,6 +66,23 @@ export default {
     this.map?.destroy();
   },
   methods: {
+    fetchPublishFee() {
+      request.get('/info/publishActivityFee')
+        .then(res => {
+          if (res.code === 1 && res.data) {
+            if (res.data.deductEnabled) {
+              this.publishFeeHint = `提交后将在链上扣除 ${res.data.cost} 时间币，余额不足将无法发布`;
+            } else {
+              this.publishFeeHint = '提交后将创建活动（当前未启用链上扣费）';
+            }
+          } else {
+            this.publishFeeHint = '提交后将创建活动';
+          }
+        })
+        .catch(() => {
+          this.publishFeeHint = '提交后将创建活动';
+        });
+    },
     async submitActivities(formData) {
       const payload = { ...formData };
       const dates = Array.isArray(payload.dates) ? payload.dates : [];
