@@ -68,7 +68,7 @@
                     <img :src="$activityImagePath" class="image">
                     <div class="contentBox">
                       <div style="font-size: 17px;">{{ row.title }}</div>
-                      <div style="font-size: 14px;">剩余名额：{{ row.quota }}</div>
+                      <div style="font-size: 14px;">剩余名额：{{ row.remain }}</div>
                       <el-progress :percentage="Number(((parseFloat(row.quota) - parseFloat(row.remain)) / parseFloat(row.quota) * 100).toFixed(1))"></el-progress>
                       <div style="display: flex;justify-content: space-between;align-items: center;font-size: 12px;">
                         {{ formatActivityDates(row) }}
