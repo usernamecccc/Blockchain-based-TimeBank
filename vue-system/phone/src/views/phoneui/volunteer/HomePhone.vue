@@ -24,40 +24,20 @@
             </el-carousel-item>
           </el-carousel>
         </div>
-        <div class="usersData">
-          <el-row :gutter="20" style="display: flex;
-          justify-content: space-between;
-          align-items: center;">
-            <el-col :span="6">
-              <div>
-                <el-statistic title="志愿者人数">
-                  <template slot="formatter">
-                    6
-                  </template>
-                </el-statistic>
-              </div>
-            </el-col>
-            <el-col :span="6">
-              <div>
-                <el-statistic title="活动数">
-                  <template slot="formatter">
-                    10
-                  </template>
-                </el-statistic>
-              </div>
-            </el-col>
-            <el-col :span="6">
-              <div>
-                <el-statistic title="老人数">
-                  <template slot="formatter">
-                    4
-                  </template>
-                </el-statistic>
-              </div>
-            </el-col>
-          </el-row>
-        </div>
-        <div class="news">
+        <div class="noticeBoard" v-loading="noticesLoading">
+          <div class="noticeBoard-title">平台公告</div>
+          <el-empty v-if="!noticesLoading && notices.length === 0" description="暂无公告"></el-empty>
+          <el-collapse v-else v-model="activeNotice" accordion class="notice-collapse">
+            <el-collapse-item
+              v-for="item in notices"
+              :key="item.id"
+              :title="noticeItemTitle(item)"
+              :name="String(item.id)"
+            >
+              <p class="notice-content">{{ item.content }}</p>
+              <p class="notice-meta">{{ formatNoticeTime(item.createTime) }}</p>
+            </el-collapse-item>
+          </el-collapse>
         </div>
         <div class="activities">
           <el-main class="activity">
@@ -125,13 +105,52 @@ export default {
       searchTitle: '',
       // 无限滚动
       busy: false,
+      notices: [],
+      noticesLoading: false,
+      activeNotice: '',
     }
   },
   mounted() {
+    this.fetchNotices();
     // 初始化时计算当前页的数据
     this.search();
   },
   methods: {
+    fetchNotices() {
+      this.noticesLoading = true;
+      request.get('/dashboard/notices?limit=30')
+        .then(response => {
+          if (response.code === 1 && Array.isArray(response.data)) {
+            this.notices = response.data;
+          } else {
+            this.notices = [];
+          }
+        })
+        .catch(() => {
+          this.notices = [];
+          this.$message.error('公告加载失败');
+        })
+        .finally(() => {
+          this.noticesLoading = false;
+        });
+    },
+    noticeItemTitle(item) {
+      const t = item.title && String(item.title).trim();
+      if (t) return t;
+      const c = item.content ? String(item.content).trim() : '';
+      if (!c) return '公告';
+      return c.length > 36 ? `${c.slice(0, 36)}…` : c;
+    },
+    formatNoticeTime(t) {
+      if (!t) return '';
+      if (typeof t === 'string') return t;
+      if (Array.isArray(t) && t.length >= 3) {
+        const pad = (n) => String(n).padStart(2, '0');
+        const [y, mo, d, h = 0, mi = 0, se = 0] = t;
+        return `${y}-${pad(mo)}-${pad(d)} ${pad(h)}:${pad(mi)}:${pad(se)}`;
+      }
+      return '';
+    },
     formatActivityDates(activity) {
       const message = activity && activity.message ? String(activity.message) : '';
       if (message) {
@@ -273,20 +292,35 @@ export default {
         background-color: #d3dce6;
       }
     }
-    .usersData{
+    .noticeBoard{
       margin-top: 10px;
       backdrop-filter: blur(10px);
-      border-radius: 5px;
-      box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
-      padding: 5px;
-    }
-    .news{
-      margin-top: 10px;
-      backdrop-filter: blur(10px);
-      border-radius: 10px;
-      box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
-      height: 80px;
-      background: url("@/assets/common/homePhone1.png") center center/cover;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.12);
+      padding: 12px;
+      min-height: 72px;
+      .noticeBoard-title{
+        font-size: 15px;
+        font-weight: 600;
+        margin-bottom: 8px;
+        color: #303133;
+      }
+      .notice-collapse{
+        border: none;
+      }
+      .notice-content{
+        white-space: pre-wrap;
+        word-break: break-word;
+        margin: 0 0 8px;
+        font-size: 14px;
+        line-height: 1.5;
+        color: #606266;
+      }
+      .notice-meta{
+        margin: 0;
+        font-size: 12px;
+        color: #909399;
+      }
     }
     .activities{
       .activity{
