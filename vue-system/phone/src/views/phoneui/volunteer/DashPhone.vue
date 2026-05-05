@@ -7,7 +7,7 @@
             <span class="link-container" style="margin-left: 35px;">
                 <router-link to="/homePhone" class="RouterLink">
                     <i class="el-icon-house icon"></i>
-                    <div class="text">用户管理</div>
+                    <div class="text">首页</div>
                 </router-link>
             </span>
             <span class="link-container">

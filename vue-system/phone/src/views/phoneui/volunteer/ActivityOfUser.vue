@@ -38,7 +38,7 @@
         <el-footer class="operations">
             <span>
             <router-link to="/homePhone" class="RouterLink">
-                <i class="el-icon-house"></i>用户管理
+                <i class="el-icon-house"></i>首页
             </router-link>
             </span>
             <span>

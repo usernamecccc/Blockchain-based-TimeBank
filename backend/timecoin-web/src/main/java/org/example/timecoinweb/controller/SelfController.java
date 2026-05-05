@@ -4,6 +4,7 @@ import io.jsonwebtoken.Claims;
 import lombok.extern.slf4j.Slf4j;
 import org.example.pojo.Result;
 import org.example.pojo.User;
+import org.example.timecoinweb.config.BlockchainProperties;
 import org.example.timecoinweb.service.RegisterService;
 import org.example.timecoinweb.service.TimeCoinChainService;
 import org.example.timecoinweb.service.UserService;
@@ -33,6 +34,28 @@ public class SelfController {
     private UserService userService;
     @Autowired
     private TimeCoinChainService timeCoinChainService;
+    @Autowired
+    private BlockchainProperties blockchainProperties;
+
+    /**
+     * 老人发布活动在链上的扣费数量（供移动端确认提示；与 {@code blockchain.old-publish-activity-cost} 一致）。
+     */
+    @GetMapping("/publishActivityFee")
+    public Result publishActivityFee() {
+        BigInteger cost = blockchainProperties.getOldPublishActivityCost();
+        if (cost == null) {
+            cost = BigInteger.ZERO;
+        }
+        boolean deduct =
+                blockchainProperties.isEnabled()
+                        && timeCoinChainService.isChainReady()
+                        && cost.signum() > 0;
+        Map<String, Object> body = new HashMap<>();
+        body.put("cost", cost.toString());
+        body.put("deductEnabled", deduct);
+        body.put("feeRecipientUserId", blockchainProperties.getFeeRecipientUserId());
+        return Result.success(body);
+    }
 
     /**
      * 当前登录用户在链上的时间币余额（userId = 用户表主键字符串）。
