@@ -1,20 +1,16 @@
 <template>
     <el-container class="homeBox">
-      <el-container class="activityBox">
-          <el-select v-model="value" @change="handleSelectClick">
-              <el-option
-              v-for="item in options"
-              :key="item.value"
-              :label="item.label"
-              :value="item.value">
-              </el-option>
-          </el-select>
-          <el-input type="text" v-model="searchTitle" prefix-icon="el-icon-search"></el-input>
-          <span class="searchBtn" style="margin-left: 20px;">
-              <el-button round>搜索</el-button>
-          </span>
-      </el-container>
       <el-main class="mainBox">
+        <div class="activity-toolbar">
+          <el-input
+            v-model="searchTitle"
+            placeholder="搜索活动标题"
+            prefix-icon="el-icon-search"
+            clearable
+            @keyup.enter.native="handleSearchClick"
+          />
+          <el-button type="primary" round class="toolbar-search-btn" @click="handleSearchClick">搜索</el-button>
+        </div>
         <div class="blockOfImage">
           <el-carousel height="150px">
             <el-carousel-item v-for="(item, index) in images" :key="index">
@@ -74,21 +70,6 @@ export default {
   name: 'HomePhone',
   data() {
     return {
-      // 选择器
-      options: [{
-        value: 1,
-        label: '成都'
-      }, {
-        value: 2,
-        label: '四川'
-      }, {
-        value: 3,
-        label: '重庆'
-      }, {
-        value: 4,
-        label: '山西'
-      }],
-      value: 1,
       // 照片
       images: [
         { url: require('@/assets/common/Carousel1.png'), link: 'https://chinavolunteer.mca.gov.cn/nvsiwebsite/XLFZYFW' },
@@ -100,8 +81,6 @@ export default {
       totalItems: 0, // 总条目数量
       currentPage: 1, // 当前页码
       tableData: [], // 表格数据
-      // 搜索
-      searchAddress: '',
       searchTitle: '',
       // 无限滚动
       busy: false,
@@ -112,10 +91,20 @@ export default {
   },
   mounted() {
     this.fetchNotices();
-    // 初始化时计算当前页的数据
+    this.resetActivityList();
     this.search();
   },
   methods: {
+    resetActivityList() {
+      this.tableData = [];
+      this.originalData = [];
+      this.currentPage = 1;
+      this.totalItems = 0;
+    },
+    handleSearchClick() {
+      this.resetActivityList();
+      this.search();
+    },
     fetchNotices() {
       this.noticesLoading = true;
       request.get('/dashboard/notices?limit=30')
@@ -178,11 +167,13 @@ export default {
       if (this.busy) return;
       this.busy = true;
 
-      // 调用你的search方法来获取新的数据
-      this.search().then(() => {
-        this.currentPage++;
-        this.busy = false;
-      });
+      this.search()
+        .then(() => {
+          this.busy = false;
+        })
+        .catch(() => {
+          this.busy = false;
+        });
     },
     search() {
       return new Promise((resolve, reject) => {
@@ -191,8 +182,8 @@ export default {
         // 添加搜索条件到 URLSearchParams 对象中
         params.append('pageSize', this.pageSize);
         params.append('page', this.currentPage);
-        params.append('address', this.searchAddress);
-        params.append('title', this.searchTitle);
+        const title = (this.searchTitle || '').trim();
+        if (title) params.append('title', title);
         // 将 URLSearchParams 对象转换为查询字符串
         const queryString = params.toString();
 
@@ -202,9 +193,8 @@ export default {
             if (response.code === 1) {
               this.totalItems = response.data.total;
               this.originalData = response.data.rows;
-              // 合并原始数据到 tableData 数组中
               this.tableData = [...this.tableData, ...this.originalData];
-              // 将新的数据作为Promise的结果返回
+              this.currentPage++;
               resolve(this.tableData);
             } else {
               this.$message.error(response.msg);
@@ -213,6 +203,7 @@ export default {
           })
           .catch(error => {
               console.error('获取数据失败:', error);
+              reject(error);
           });
       });
     },
@@ -234,12 +225,6 @@ export default {
       // 如果当前时间早于截止日期，则返回 true，否则返回 false
       return currentDate < deadlineDate;
     },
-    // 地址搜索
-    handleSelectClick() {
-      this.searchAddress = this.options.find(option => option.value === this.value);
-      this.tableData = [];
-      this.search();
-    },
   }
 }
 </script>
@@ -260,20 +245,22 @@ export default {
     border-radius: 20px;
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
   }
-  .activityBox{
-      display: flex;
-      align-items: center;
-      margin: 10px;
-      .el-select{
-          width: 100px;
-          margin-right: 20px;
-      }
-      .el-input{
-          width: auto;
-      }
-  }
   .mainBox{
     width: 100%;
+    .activity-toolbar{
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin: 10px 10px 0;
+      box-sizing: border-box;
+      .el-input{
+        flex: 1;
+        min-width: 0;
+      }
+      .toolbar-search-btn{
+        flex-shrink: 0;
+      }
+    }
     // 走马灯
     .blockOfImage{
       .el-carousel__item h3 {
