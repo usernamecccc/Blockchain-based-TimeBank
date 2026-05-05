@@ -5,6 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.example.pojo.Result;
 import org.example.pojo.User;
 import org.example.timecoinweb.service.RegisterService;
+import org.example.timecoinweb.service.TimeCoinChainService;
 import org.example.timecoinweb.service.UserService;
 import org.example.utils.AliOSSUtils;
 import org.example.utils.JwtUtils;
@@ -14,6 +15,9 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.File;
 import java.io.IOException;
+import java.math.BigInteger;
+import java.util.HashMap;
+import java.util.Map;
 
 //用于显示当前用户自己的信息
 
@@ -27,6 +31,36 @@ public class SelfController {
     private AliOSSUtils aliOSSUtils;
     @Autowired
     private UserService userService;
+    @Autowired
+    private TimeCoinChainService timeCoinChainService;
+
+    /**
+     * 当前登录用户在链上的时间币余额（userId = 用户表主键字符串）。
+     * 路径含 info，{@link org.example.timecoinweb.interceptor.LoginCheckInterceptor} 对所有已登录角色放行。
+     */
+    @GetMapping("/coinBalance")
+    public Result coinBalance(@RequestHeader("token") String token) {
+        Claims claims = JwtUtils.parseJWT(token);
+        Integer id = (Integer) claims.get("id");
+        String userId = String.valueOf(id);
+        Map<String, Object> body = new HashMap<>();
+        body.put("userId", userId);
+        if (!timeCoinChainService.isChainReady()) {
+            body.put("balance", "0");
+            body.put("chainReady", Boolean.FALSE);
+            body.put("reason", timeCoinChainService.getNotReadyReason());
+            return Result.success(body);
+        }
+        try {
+            BigInteger bal = timeCoinChainService.balanceOf(userId);
+            body.put("balance", bal.toString());
+            body.put("chainReady", Boolean.TRUE);
+            return Result.success(body);
+        } catch (Exception e) {
+            log.warn("coinBalance 查询失败 userId={}", userId, e);
+            return Result.error(e.getMessage());
+        }
+    }
 
     /**
      * 查询用户个人信息

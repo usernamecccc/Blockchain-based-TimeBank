@@ -25,7 +25,7 @@
                         <div>
                             <el-statistic title="时间币总数">
                             <template slot="formatter">
-                                456
+                                {{ coinBalanceDisplay }}
                             </template>
                             </el-statistic>
                         </div>
@@ -73,10 +73,21 @@ export default {
         return{
             infoData: {},
             squareUrl: '',
+            coinBalance: null,
+            coinBalanceLoading: true,
+            coinChainReady: true,
         }
+    },
+    computed: {
+        coinBalanceDisplay() {
+            if (this.coinBalanceLoading) return '…';
+            if (this.coinBalance === null || this.coinBalance === undefined) return '—';
+            return this.coinBalance;
+        },
     },
     created() {
         this.search();
+        this.fetchCoinBalance();
     },
     methods: {
         redirectToInfo() {
@@ -98,6 +109,27 @@ export default {
         },
         queryActivity() {
             this.$router.push('activityOld');
+        },
+        fetchCoinBalance() {
+            this.coinBalanceLoading = true;
+            request.get('/info/coinBalance')
+                .then(response => {
+                    if (response.code === 1 && response.data) {
+                        this.coinBalance = response.data.balance != null ? String(response.data.balance) : '0';
+                        this.coinChainReady = response.data.chainReady !== false;
+                        if (!this.coinChainReady && response.data.reason) {
+                            console.warn('链未就绪:', response.data.reason);
+                        }
+                    } else {
+                        this.coinBalance = '—';
+                    }
+                })
+                .catch(() => {
+                    this.coinBalance = '—';
+                })
+                .finally(() => {
+                    this.coinBalanceLoading = false;
+                });
         },
     }
 }

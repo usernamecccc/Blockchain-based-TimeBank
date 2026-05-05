@@ -246,7 +246,6 @@ export default {
                 const response = await request.get(`users/volold/activity?${queryString}`);
                 if (response.code === 1) {
                     this.form = response.data;
-                    this.$message("已经报名成功，请尽快联系老人");
                     this.calculateDeadline();
                 } else {
                     this.$message.error(response.msg);
