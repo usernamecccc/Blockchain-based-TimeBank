@@ -27,49 +27,52 @@ import { requireAuth, loginrequireAuth } from '../utils/permission'
 Vue.use(VueRouter)
 
 const routes = [
-  // 登录
   {
     path: '/',
     name: 'LoginPhone',
     component: LoginPhone,
     beforeEnter: loginrequireAuth,
+    meta: { hideMobileBack: true },
   },
   {
     path: '/registerPhone',
     name: 'RegisterPhone',
-    component: RegisterPhone
+    component: RegisterPhone,
+    meta: { hideMobileBack: true },
   },
   {
-    path: '*',// 未定义路径
+    path: '*',
+    name: 'PageNotFound',
     component: () => import('@/views/phoneui/404'),
-    hidden: true
+    hidden: true,
+    meta: { hideMobileBack: true },
   },
-  // 志愿者
   {
     path: '/dashPhone',
     name: 'DashPhone',
     component: DashPhone,
-    // 使用 requireAuth 路由守卫检查 token 是否存在
     beforeEnter: requireAuth,
     children: [
       {
         path: '/homePhone',
         name: 'HomePhone',
         component: HomePhone,
-        // 使用 requireAuth 路由守卫检查 token 是否存在
         beforeEnter: requireAuth,
+        meta: { hideMobileBack: true },
       },
       {
         path: '/addActivityPhone',
         name: 'AddActivityPhone',
         component: AddActivityPhone,
         beforeEnter: requireAuth,
+        meta: { hideMobileBack: true },
       },
       {
         path: '/infoOfUserPhone',
         name: 'InfoOfUserPhone',
         component: InfoOfUserPhone,
         beforeEnter: requireAuth,
+        meta: { hideMobileBack: true },
       },
     ]
   },
@@ -78,32 +81,50 @@ const routes = [
     name: 'InfoPhone',
     component: InfoPhone,
     beforeEnter: requireAuth,
+    meta: {
+      mobileBackTitle: '个人信息',
+    },
   },
   {
     path: '/targetPage',
     name: 'TargetPage',
     component: TargetPage,
     beforeEnter: requireAuth,
+    meta: {
+      mobileBackTitle: '活动详情',
+      mobileBackFallback: '/homePhone',
+    },
   },
   {
     path: '/activityOfUser',
     name: 'ActivityOfUser',
     component: ActivityOfUser,
     beforeEnter: requireAuth,
+    meta: {
+      mobileBackTitle: '参与活动',
+      mobileBackFallback: '/infoOfUserPhone',
+    },
   },
   {
     path: '/registeredActivity',
     name: 'RegisteredActivity',
     component: RegisteredActivity,
     beforeEnter: requireAuth,
+    meta: {
+      mobileBackTitle: '我已报名',
+      mobileBackFallback: '/activityOfUser',
+    },
   },
   {
     path: '/signInUser',
     name: 'SignInUser',
     component: SignInUser,
     beforeEnter: requireAuth,
+    meta: {
+      mobileBackTitle: '活动签到',
+      mobileBackFallback: '/registeredActivity',
+    },
   },
-  // 老人
   {
     path: '/dashOld',
     name: 'DashOld',
@@ -115,69 +136,100 @@ const routes = [
         name: 'HomeOld',
         component: HomeOld,
         beforeEnter: requireAuth,
+        meta: { hideMobileBack: true },
       },
       {
         path: '/serverOld',
         name: 'ServerOld',
         component: ServerOld,
         beforeEnter: requireAuth,
+        meta: { hideMobileBack: true },
       },
       {
         path: '/artificialOld',
         name: 'ArtificialOld',
         component: ArtificialOld,
         beforeEnter: requireAuth,
+        meta: { hideMobileBack: true },
       },
       {
         path: '/activityOld',
         name: 'ActivityOld',
         component: ActivityOld,
         beforeEnter: requireAuth,
+        meta: {
+          mobileBackTitle: '我的活动',
+          mobileBackFallback: '/homeOld',
+        },
       },
-    ] 
+    ]
   },
-  // 添加活动
   {
     path: '/addActivityOld',
     name: 'AddActivityOld',
     component: AddActivityOld,
     beforeEnter: requireAuth,
+    meta: {
+      mobileBackTitle: '发起活动',
+      mobileBackFallback: '/activityOld',
+    },
     children: [
       {
         path: '/locationGet',
         name: 'LocationGet',
         component: LocationGet,
+        meta: {
+          mobileBackTitle: '选择地点',
+          mobileBackFallback: '/getInfoActivity',
+        },
       },
       {
         path: '/getInfoActivity',
         name: 'GetInfoActivity',
         component: GetInfoActivity,
+        meta: {
+          mobileBackTitle: '活动信息',
+          mobileBackFallback: '/serverOld',
+        },
       },
       {
         path: '/endAddActivity',
         name: 'EndAddActivity',
         component: EndAddActivity,
-      }
+        meta: {
+          mobileBackTitle: '确认提交',
+          mobileBackFallback: '/locationGet',
+        },
+      },
     ]
   },
-  // 查看活动信息
   {
     path: '/idActivityOld',
     name: 'IdActivityOld',
     component: IdActivityOld,
     beforeEnter: requireAuth,
+    meta: {
+      mobileBackTitle: '活动详情',
+      mobileBackFallback: '/activityOld',
+    },
   },
-  // 查看时间币信息
   {
     path: '/coinInfo',
     name: 'CoinInfo',
     component: CoinInfo,
     beforeEnter: requireAuth,
+    meta: {
+      mobileBackTitle: '时间币详情',
+    },
   },
 ]
 
 const router = new VueRouter({
-  routes
+  routes,
+})
+
+router.afterEach((to, from) => {
+  router._previousRoute = from
 })
 
 export default router

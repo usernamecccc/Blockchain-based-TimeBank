@@ -70,6 +70,9 @@ public class UserServiceImpl implements UserService {
 
         chargePublishFeeOnChain(userId);
 
+        // 老人自主发布：提交待审核（1）
+        activity.setStatus((short) 1);
+
         //将这个活动存入活动表
         activityMapper.insert(activity);
     }

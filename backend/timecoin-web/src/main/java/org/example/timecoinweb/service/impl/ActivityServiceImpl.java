@@ -109,6 +109,8 @@ public class ActivityServiceImpl implements ActivityService {
         activity.setCreateTime(LocalDateTime.now());
         activity.setUpdateTime(LocalDateTime.now());
         activity.setRemain(activity.getQuota());
+        // 管理员代为发布：直接审核通过（2），不再走待审核）
+        activity.setStatus((short) 2);
 
         resolveOldIdForActivity(activity);
         activityMapper.insert(activity);
