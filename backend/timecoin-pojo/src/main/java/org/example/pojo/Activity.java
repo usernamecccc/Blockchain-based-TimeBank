@@ -29,4 +29,6 @@ public class Activity {
     private LocalDateTime updateTime;
     private String message;
     private Short remain;
+    /** 每名志愿者完成后老人答谢的时间币（整数）；0 表示不向志愿者链上答谢 */
+    private Integer volunteerReward;
 }

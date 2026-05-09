@@ -45,6 +45,7 @@ export default {
     return {
       dialogVisible: false,
       publishFeeHint: '加载规则中…',
+      volunteerRewardMaxHint: '',
       map: null,
       address: "",
       keyword: "",
@@ -70,11 +71,20 @@ export default {
       request.get('/info/publishActivityFee')
         .then(res => {
           if (res.code === 1 && res.data) {
+            let hint = '';
             if (res.data.deductEnabled) {
-              this.publishFeeHint = `提交后将在链上扣除 ${res.data.cost} 时间币，余额不足将无法发布`;
+              hint = `提交后将在链上扣除 ${res.data.cost} 时间币，余额不足将无法发布`;
             } else {
-              this.publishFeeHint = '提交后将创建活动（当前未启用链上扣费）';
+              hint = '提交后将创建活动（当前未启用链上扣费）';
             }
+            if (res.data.volunteerRewardMaxCapped && res.data.volunteerRewardMax) {
+              this.volunteerRewardMaxHint = `；若填写了答谢，每名志愿者至多 ${res.data.volunteerRewardMax}（完成后从老人链上余额划转）`;
+            } else if (res.data.volunteerRewardMaxCapped === false) {
+              this.volunteerRewardMaxHint = '；答谢金额由后端校验（未配置上限时请谨慎填写）';
+            } else {
+              this.volunteerRewardMaxHint = '';
+            }
+            this.publishFeeHint = hint + this.volunteerRewardMaxHint;
           } else {
             this.publishFeeHint = '提交后将创建活动';
           }

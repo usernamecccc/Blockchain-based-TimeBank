@@ -56,6 +56,7 @@ CREATE TABLE IF NOT EXISTS activity (
   update_time TIMESTAMP DEFAULT NULL,
   message VARCHAR(512) DEFAULT NULL,
   remain SMALLINT NOT NULL DEFAULT 0,
+  volunteer_reward INT NOT NULL DEFAULT 0,
   CONSTRAINT fk_act_old FOREIGN KEY (old_id) REFERENCES old(id),
   CONSTRAINT fk_act_admi FOREIGN KEY (administrator_id) REFERENCES administrator(id)
 );
@@ -74,6 +75,7 @@ CREATE TABLE IF NOT EXISTS activity_volunteer (
   volunteer_id INT NOT NULL,
   status SMALLINT DEFAULT NULL,
   sign SMALLINT DEFAULT NULL,
+  reward_paid SMALLINT NOT NULL DEFAULT 0,
   create_time TIMESTAMP DEFAULT NULL,
   update_time TIMESTAMP DEFAULT NULL,
   CONSTRAINT uk_act_vol UNIQUE (activity_id, volunteer_id),

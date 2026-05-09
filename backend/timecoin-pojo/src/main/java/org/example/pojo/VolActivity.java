@@ -16,6 +16,8 @@ public class VolActivity {
     Integer activityId;
     Short status;
     Short sign;
+    /** 0 未付答谢 / 1 已付链上答谢 */
+    Short rewardPaid;
     LocalDateTime createTime;
     LocalDateTime updateTime;
 }

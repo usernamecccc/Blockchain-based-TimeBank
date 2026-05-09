@@ -40,8 +40,8 @@ public interface ActivityMapper {
      * 管理员新增加部门
      * @param activity
      */
-    @Insert("insert into activity(title, quota, deadline, date, begin, end, address, old_id, phone, description, administrator_id, create_time, update_time, message, remain) " +
-            "values (#{title},#{quota},#{deadline},#{date},#{begin},#{end},#{address},#{oldId},#{phone},#{description},#{administratorId},#{createTime},#{updateTime},#{message},#{remain})")
+    @Insert("insert into activity(title, quota, deadline, date, begin, end, address, old_id, phone, description, administrator_id, create_time, update_time, message, remain, volunteer_reward, status) " +
+            "values (#{title},#{quota},#{deadline},#{date},#{begin},#{end},#{address},#{oldId},#{phone},#{description},#{administratorId},#{createTime},#{updateTime},#{message},#{remain},#{volunteerReward},#{status})")
     void insert(Activity activity);
 
     /**

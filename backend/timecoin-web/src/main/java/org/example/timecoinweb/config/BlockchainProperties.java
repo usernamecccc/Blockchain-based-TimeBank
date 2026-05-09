@@ -35,4 +35,10 @@ public class BlockchainProperties {
      * 扣费转入的业务 userId（合约 string），余额记在合约 mapping 中，便于区分「池」。
      */
     private String feeRecipientUserId = "platform";
+
+    /**
+     * 老人向志愿者单次答谢的金额上限（含）；服务端校验与前端提示保持一致。
+     * 若为 null、零或负数则视作不限制上限（不推荐生产环境）。
+     */
+    private BigInteger volunteerRewardMax = BigInteger.valueOf(999);
 }

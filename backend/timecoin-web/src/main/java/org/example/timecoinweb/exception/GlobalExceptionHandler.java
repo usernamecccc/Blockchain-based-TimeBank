@@ -18,6 +18,11 @@ public class GlobalExceptionHandler {
         return Result.error(ex.getMessage());
     }
 
+    @ExceptionHandler(IllegalArgumentException.class)
+    public Result handleIllegalArgument(IllegalArgumentException ex) {
+        return Result.error(ex.getMessage());
+    }
+
     @ExceptionHandler(DataIntegrityViolationException.class)
     public Result handleDataIntegrityViolationException(DataIntegrityViolationException ex){
         ex.printStackTrace();

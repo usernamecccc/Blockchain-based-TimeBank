@@ -14,8 +14,10 @@
             >
             </el-statistic>
         </div>
-        <el-button round style="width: 80%;" v-if="!isSignUp">报名结束</el-button>
-        <el-button type="primary" round style="width: 80%;" @click= "signUp" v-if="isSignUp">点击报名</el-button>
+        <el-button round style="width: 80%;" v-if="showClosedBanner">报名结束</el-button>
+        <el-button type="primary" round style="width: 80%;" @click="signUp" v-if="showJoinButton">点击报名</el-button>
+        <el-button type="warning" round plain style="width: 80%;" @click="cancelEnrollment" v-if="showCancelButton">取消报名</el-button>
+        <div v-if="alreadyEnrolled && enrollmentChecked" style="margin-top:10px;font-size:13px;color:#67c23a;">您已报名该活动</div>
       </div>
       <div class="content">
         <el-form ref="form" :model="form" label-width="100px" style="width: 100%;">
@@ -78,6 +80,10 @@ export default {
             id: null,
             pageSize: 1,
             currentPage: 1,
+            /** 当前登录志愿者是否已在中间表报名该活动 */
+            alreadyEnrolled: false,
+            /** 是否已请求过报名状态（避免未返回前误显按钮） */
+            enrollmentChecked: false,
             // 日期表
             pickerOptionsofsearch: {
                 disabledDate(time) {
@@ -156,21 +162,21 @@ export default {
             const selectedOption = this.options.find(option => option.value === this.form.status);
             return selectedOption ? selectedOption.label : '未知状态';
         },
-        isSignUp() {
-            // 获取当前时间
-            const now = new Date();
-
-            // 将截止时间字符串转换为日期对象
+        /** 报名尚未截止 */
+        deadlineOpen() {
+            if (!this.form.deadline) return false;
             const deadlineDate = new Date(this.form.deadline);
-
-            // 比较当前时间和截止时间
-            if (deadlineDate > now) {
-                // 截止时间在当前时间之后
-                return true;
-            } else {
-                // 截止时间在当前时间之前
-                return false;
-            }
+            if (Number.isNaN(deadlineDate.getTime())) return false;
+            return deadlineDate > new Date();
+        },
+        showJoinButton() {
+            return this.enrollmentChecked && this.deadlineOpen && !this.alreadyEnrolled;
+        },
+        showCancelButton() {
+            return this.enrollmentChecked && this.deadlineOpen && this.alreadyEnrolled;
+        },
+        showClosedBanner() {
+            return this.enrollmentChecked && !this.deadlineOpen;
         }
     },
     methods: {
@@ -208,12 +214,31 @@ export default {
                 .then(response => {
                 if (response.code === 1) {
                     this.form = response.data;
+                    this.fetchEnrollmentStatus();
                 } else {
                     this.$message.error(response.msg);
                 }
                 })
                 .catch(error => {
                     console.error('获取数据失败:', error);
+                });
+        },
+        /**
+         * 后端：已报名则 GET /users/vol/sign 返回 code=1 与 VolActivity；未报名返回非 1（如「查询不到该活动」）。
+         */
+        fetchEnrollmentStatus() {
+            this.enrollmentChecked = false;
+            const params = new URLSearchParams();
+            params.append('activityId', this.id);
+            request.get(`users/vol/sign?${params.toString()}`)
+                .then((response) => {
+                    this.alreadyEnrolled = response.code === 1 && response.data != null;
+                })
+                .catch(() => {
+                    this.alreadyEnrolled = false;
+                })
+                .finally(() => {
+                    this.enrollmentChecked = true;
                 });
         },
         signUp() {
@@ -224,6 +249,8 @@ export default {
                 .then(response => {
                 if (response.code === 1) {
                     this.$message.success("报名成功");
+                    this.alreadyEnrolled = true;
+                    this.search();
                     setTimeout(() => {
                         this.$router.push({ 
                             name: 'HomePhone',
@@ -235,6 +262,22 @@ export default {
                 })
                 .catch(error => {
                     console.error('报名失败:', error);
+                });
+        },
+        cancelEnrollment() {
+            const data = { id: this.id };
+            request.put(`users/vol/cancel`, data)
+                .then((response) => {
+                    if (response.code === 1) {
+                        this.$message.success(response.msg || '已取消报名');
+                        this.alreadyEnrolled = false;
+                        this.search();
+                    } else {
+                        this.$message.error(response.msg);
+                    }
+                })
+                .catch((error) => {
+                    console.error('取消报名失败:', error);
                 });
         }
     }

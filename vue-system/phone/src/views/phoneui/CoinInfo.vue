@@ -1,9 +1,5 @@
 <template>
     <div class="mobile-app">
-      <div class="navbar">
-        <span class="page-title">时间币详情</span>
-      </div>
-
       <div class="user-info" v-loading="loading">
         <el-avatar class="avatar" size="large" :src="avatarSrc">用户</el-avatar>
         <div class="details">
@@ -86,19 +82,6 @@
   <style scoped>
   .mobile-app {
     padding: 10px;
-  }
-
-  .navbar {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 10px;
-    background-color: #333;
-    color: white;
-  }
-
-  .page-title {
-    font-size: 18px;
   }
 
   .user-info {

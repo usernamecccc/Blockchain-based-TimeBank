@@ -64,6 +64,7 @@ CREATE TABLE activity (
   update_time DATETIME DEFAULT NULL,
   message VARCHAR(512) DEFAULT NULL,
   remain SMALLINT NOT NULL DEFAULT 0,
+  volunteer_reward INT NOT NULL DEFAULT 0 COMMENT '完成后老人向每名志愿者答谢的时间币数量',
   CONSTRAINT fk_act_old FOREIGN KEY (old_id) REFERENCES old(id),
   CONSTRAINT fk_act_admi FOREIGN KEY (administrator_id) REFERENCES administrator(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
@@ -82,6 +83,7 @@ CREATE TABLE activity_volunteer (
   volunteer_id INT NOT NULL,
   status SMALLINT DEFAULT NULL,
   sign SMALLINT DEFAULT NULL,
+  reward_paid SMALLINT NOT NULL DEFAULT 0 COMMENT '0未付答谢 1已付',
   create_time DATETIME DEFAULT NULL,
   update_time DATETIME DEFAULT NULL,
   UNIQUE KEY uk_act_vol (activity_id, volunteer_id),
