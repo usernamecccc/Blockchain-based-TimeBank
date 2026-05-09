@@ -40,10 +40,7 @@
 
 
     <select id="volSelectPageActivity" resultType="org.example.pojo.Activity">
-        select distinct act.id, act.title , act.quota , act.deadline
-             , act.date , act.begin , act.end , act.address , act.old_id
-               , act.phone , act.description , act.status , act.administrator_id
-             , act.create_time , act.update_time , act.message , act.remain
+        select distinct act.*
         from activity as act,activity_volunteer as av
         <where>
             <if test="oldId!=null">
@@ -77,7 +74,7 @@
                 and av.volunteer_id=#{volId}
             </if>
         </where>
-        order by update_time desc
+        order by act.update_time desc
     </select>
 
 

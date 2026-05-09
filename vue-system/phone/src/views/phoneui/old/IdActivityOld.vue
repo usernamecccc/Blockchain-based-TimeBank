@@ -56,6 +56,27 @@
                 <el-form-item label="活动描述">
                     <el-input type="textarea" v-model="form.description"></el-input>
                 </el-form-item>
+                <el-form-item label="每人答谢">
+                    <el-input :value="String(form.volunteerReward ?? 0)" readonly prefix-icon="el-icon-money">
+                        <template slot="append">时间币/人（链上）</template>
+                    </el-input>
+                </el-form-item>
+                <el-alert
+                    v-if="Number(form.volunteerReward || 0) <= 0"
+                    type="warning"
+                    :closable="false"
+                    show-icon
+                    title="当前活动答谢为 0：点击「服务完成」只会更新记录，不会让志愿者链上余额增加。"
+                    style="width: 100%; margin-bottom: 12px;"
+                />
+                <el-alert
+                    v-else
+                    type="info"
+                    :closable="false"
+                    show-icon
+                    title="答谢大于 0 时：点「标记完成」会要求区块链可用，并从发布老人链上余额划转到该志愿者。"
+                    style="width: 100%; margin-bottom: 12px;"
+                />
                 <el-form-item label="活动状态">
                     <el-input v-model="statusLabel" readonly prefix-icon="el-icon-info"></el-input>
                 </el-form-item>
@@ -81,11 +102,13 @@
                                 <div style="display: flex;justify-content: center;align-items: center;">
                                     <el-button v-if="!isEndSign" round size="mini"
                                         style="margin-top: 5px;width: 45%;">服务未开始</el-button>
-                                    <el-button v-else-if="isEndSign && row.status === 0" type="primary" round
+                                    <el-button v-else-if="isEndSign && isVolunteerIncomplete(row)" type="primary" round
                                         size="mini" @click="editUser(row.id)"
-                                        style="margin-top: 5px;width: 45%;">服务完成</el-button>
-                                    <el-button v-else round size="mini" style="margin-top: 5px;width: 45%;"
-                                        @click="editUser1(row.id)">服务已完成</el-button>
+                                        style="margin-top: 5px;width: 45%;">标记完成（链上答谢）</el-button>
+                                    <el-button v-else round size="mini" type="warning"
+                                        style="margin-top: 5px;width: 45%;"
+                                        plain
+                                        @click="editUser1(row.id)">撤回完成</el-button>
                                     <el-button round size="mini" type="primary"
                                         style="margin-top: 5px;width: 45%;">联系志愿者</el-button>
                                 </div>
@@ -210,9 +233,17 @@ export default {
         },
         getIsEndSign() {
             const now = new Date();
-            if (this.deadline < now) {
-                this.isEndSign = true;
+            const d = this.deadline;
+            if (!(d instanceof Date) || Number.isNaN(d.getTime())) {
+                this.isEndSign = false;
+                return;
             }
+            this.isEndSign = d.getTime() < now.getTime();
+        },
+        /** 后端可能返回 number / string / null */
+        isVolunteerIncomplete(row) {
+            const s = row && row.status;
+            return s == null || Number(s) === 0;
         },
         async search() {
             try {
@@ -230,6 +261,7 @@ export default {
                 if (response.code === 1) {
                     this.form = response.data;
                     this.calculateDeadline();
+                    this.getIsEndSign();
                 } else {
                     this.$message.error(response.msg);
                 }
@@ -257,6 +289,7 @@ export default {
                             // 合并原始数据到 tableData 数组中
                             this.tableData = [...this.tableData, ...this.originalData];
                             this.calculateDeadline();
+                            this.getIsEndSign();
                             // 将新的数据作为Promise的结果返回
                             resolve(this.tableData);
                         } else {

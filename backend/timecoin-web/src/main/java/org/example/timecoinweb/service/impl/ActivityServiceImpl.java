@@ -4,6 +4,7 @@ import com.github.pagehelper.Page;
 import com.github.pagehelper.PageHelper;
 import org.example.pojo.Activity;
 import org.example.pojo.PageBean;
+import org.example.timecoinweb.config.BlockchainProperties;
 import org.example.timecoinweb.mapper.ActivityMapper;
 import org.example.timecoinweb.mapper.AdmiMapper;
 import org.example.timecoinweb.mapper.OldMapper;
@@ -13,6 +14,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigInteger;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -41,6 +43,30 @@ public class ActivityServiceImpl implements ActivityService {
     AdmiMapper admiMapper;
     @Autowired
     OldMapper oldMapper;
+    @Autowired
+    BlockchainProperties blockchainProperties;
+
+    /** 管理员端：答谢上限校验；插入时 null 视作 0。 */
+    private void normalizeVolunteerRewardForAdmin(Activity activity, boolean insert) {
+        Integer r = activity.getVolunteerReward();
+        if (insert && r == null) {
+            activity.setVolunteerReward(0);
+            return;
+        }
+        Integer vObj = activity.getVolunteerReward();
+        if (vObj == null) {
+            return;
+        }
+
+        int v = vObj;
+        if (v < 0) {
+            throw new IllegalArgumentException("答谢时间币不能为负数");
+        }
+        BigInteger max = blockchainProperties.getVolunteerRewardMax();
+        if (max != null && max.signum() > 0 && BigInteger.valueOf(v).compareTo(max) > 0) {
+            throw new IllegalArgumentException("答谢时间币不能超过单次上限 " + max);
+        }
+    }
 
     /**
      * 前端「老人ID」通常填 user.id；库中外键 activity.old_id 引用的是 old.id。
@@ -96,6 +122,7 @@ public class ActivityServiceImpl implements ActivityService {
         activity.setUpdateTime(LocalDateTime.now());
 
         resolveOldIdForActivity(activity);
+        normalizeVolunteerRewardForAdmin(activity, false);
         activityMapper.update(activity);
     }
 
@@ -113,6 +140,7 @@ public class ActivityServiceImpl implements ActivityService {
         activity.setStatus((short) 2);
 
         resolveOldIdForActivity(activity);
+        normalizeVolunteerRewardForAdmin(activity, true);
         activityMapper.insert(activity);
     }
 

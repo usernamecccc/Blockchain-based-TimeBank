@@ -11,6 +11,9 @@
         <el-form-item prop="quota">
           <el-input-number v-model="form.quota" :min="1" placeholder="活动名额"></el-input-number>
         </el-form-item>
+        <el-form-item prop="volunteerReward" class="add-activity-full-row">
+          <el-input-number v-model="form.volunteerReward" :min="0" :max="volunteerRewardInputMax" :precision="0" placeholder="每名志愿者完成后答谢的时间币（0 表示无）" style="width: 100%"></el-input-number>
+        </el-form-item>
         <el-form-item prop="oldId">
           <el-input v-model="form.oldId" placeholder="老人用户ID（user.id，非任意数字）"></el-input>
         </el-form-item>
@@ -87,7 +90,11 @@ export default {
   name: 'AdminView',
   data() {
     return {
-      form: {},
+      form: {
+        volunteerReward: 0,
+      },
+      volunteerRewardMaxCapped: true,
+      volunteerRewardDisplayMax: '999',
       pickerOptionsofform: {
         shortcuts: [{
           text: '今天',
@@ -130,9 +137,53 @@ export default {
         address: [{ required: true, message: '请输入活动地址', trigger: 'blur' }],
         oldId: [{ required: true, message: '请输入老人ID', trigger: 'blur' }],
         description: [{ required: true, message: '请输入活动描述', trigger: 'blur' }],
-        message: [{ required: false, message: '请输入管理员建议', trigger: 'blur' }]
+        message: [{ required: false, message: '请输入管理员建议', trigger: 'blur' }],
+        volunteerReward: [
+          {
+            validator: (_, val, cb) => {
+              if (val === null || val === undefined || val === '') {
+                cb();
+                return;
+              }
+              const n = Number(val);
+              if (!Number.isFinite(n) || n < 0) {
+                cb(new Error('答谢时间币须为非负数'));
+                return;
+              }
+              if (this.volunteerRewardMaxCapped) {
+                const cap = Number(this.volunteerRewardDisplayMax);
+                if (Number.isFinite(cap) && n > cap) {
+                  cb(new Error(`不能超过 ${cap}`));
+                  return;
+                }
+              }
+              cb();
+            },
+            trigger: 'change',
+          },
+        ]
       }
     };
+  },
+  computed: {
+    volunteerRewardInputMax() {
+      if (!this.volunteerRewardMaxCapped) return 999999;
+      const n = parseInt(String(this.volunteerRewardDisplayMax), 10);
+      return Number.isFinite(n) && n > 0 ? n : 999999;
+    },
+  },
+  mounted() {
+    request
+      .get('/info/publishActivityFee')
+      .then((res) => {
+        if (res.code === 1 && res.data && res.data.volunteerRewardMaxCapped === false) {
+          this.volunteerRewardMaxCapped = false;
+        } else if (res.code === 1 && res.data && res.data.volunteerRewardMax) {
+          this.volunteerRewardDisplayMax = String(res.data.volunteerRewardMax);
+          this.volunteerRewardMaxCapped = true;
+        }
+      })
+      .catch(() => {});
   },
   methods: {
     /** el-time-picker 多为 Date，也可能为字符串；统一成 HH:mm:ss */
@@ -249,7 +300,7 @@ export default {
     },
     resetForm() {
       this.$refs.form.resetFields();
-      this.form = {};
+      this.form = { volunteerReward: 0 };
     }
   }
 };

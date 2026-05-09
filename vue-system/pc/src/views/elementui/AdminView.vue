@@ -138,6 +138,9 @@
         <el-form-item label="活动名额">
           <el-input-number v-model="form.quota" :min="1"></el-input-number>
         </el-form-item>
+        <el-form-item label="每人答谢">
+          <el-input-number v-model="form.volunteerReward" :min="0" :precision="0" placeholder="链上答谢，0 表示不答谢"></el-input-number>
+        </el-form-item>
         <el-form-item label="报名截止时间">
           <div class="block">
             <el-date-picker
@@ -162,7 +165,7 @@
           <el-input v-model="form.address"></el-input>
         </el-form-item>
         <el-form-item label="老人ID">
-          <el-input v-model="form.oldId"></el-input>
+          <el-input v-model="form.oldId" placeholder="一般为 old 表主键；也可填对应用户的 user.id"></el-input>
         </el-form-item>
         <el-form-item label="发布人电话">
           <el-input v-model="form.phone"></el-input>
@@ -213,7 +216,7 @@
         <el-form-item label="管理员建议">
           <el-input type="textarea" v-model="form.message"></el-input>
         </el-form-item>
-        <el-form-item style="display: flex; justify-content: flex-end; align-items: center;">
+        <el-form-item v-if="!formDisabled" style="display: flex; justify-content: flex-end; align-items: center;">
           <el-button type="primary" @click="onSubmitForm">提 交</el-button>
         </el-form-item>
       </el-form>
@@ -224,6 +227,7 @@
 <script>
 import { MessageBox } from 'element-ui';// 需要单独导入
 import request from '@/utils/request';
+import { format } from 'date-fns-tz';
 
 export default {
   name: 'AdminView',
@@ -299,7 +303,6 @@ export default {
   },
   mounted() {
     this.search();
-    this.isFormItemDisabled();
     this.$nextTick(() => {
       if (this.$refs.tree) this.$refs.tree.setCurrentKey('all');
     });
@@ -461,16 +464,39 @@ export default {
           return '';
       }
     },
+    /** 与新增页一致：将开始/结束时间规范为 HH:mm:ss，避免后端 LocalTime 反序列化失败 */
+    formatWallTimeToHMS(val) {
+      if (val == null || val === '') return '';
+      if (val instanceof Date && !Number.isNaN(val.getTime())) {
+        const h = String(val.getHours()).padStart(2, '0');
+        const m = String(val.getMinutes()).padStart(2, '0');
+        const s = String(val.getSeconds()).padStart(2, '0');
+        return `${h}:${m}:${s}`;
+      }
+      const d = new Date(val);
+      if (!Number.isNaN(d.getTime())) {
+        const h = String(d.getHours()).padStart(2, '0');
+        const m = String(d.getMinutes()).padStart(2, '0');
+        const s = String(d.getSeconds()).padStart(2, '0');
+        return `${h}:${m}:${s}`;
+      }
+      if (typeof val === 'string') {
+        const m = val.trim().match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?/);
+        if (m) {
+          return `${m[1].padStart(2, '0')}:${m[2]}:${(m[3] || '00').padStart(2, '0')}`;
+        }
+      }
+      return '';
+    },
     // 表单
     queryForm(rowData) {
-      this.form = { ...rowData};
-      // 打开抽屉
+      this.form = { ...rowData, volunteerReward: rowData.volunteerReward ?? 0 };
+      this.formDisabled = true;
       this.drawer = true;
     },
     editForm(rowData){
-      this.form = { ...rowData};
+      this.form = { ...rowData, volunteerReward: rowData.volunteerReward ?? 0 };
       this.formDisabled = false;
-      // 打开抽屉
       this.drawer = true;
     },
     handleClose(done) {
@@ -481,41 +507,66 @@ export default {
         })
         .catch(() => {});
     },
-    isFormItemDisabled(){
-      // 检查表单项是否禁用
-      return this.formDisabled;
-    },
     onSubmitForm(){
-      // 正则表达式,用于匹配时分秒形式(HH:mm:ss)
+      if (this.formDisabled) {
+        this.$message.warning('请先点击「编辑」再保存');
+        return;
+      }
+      const beginHms = this.formatWallTimeToHMS(this.form.begin);
+      const endHms = this.formatWallTimeToHMS(this.form.end);
+      if (!beginHms || !endHms) {
+        this.$message.warning('活动开始/结束时间格式有误，请使用 HH:mm 或 HH:mm:ss');
+        return;
+      }
       const timePattern = /^(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d$/;
-      if(!timePattern.test(this.form.begin)){
-        this.$message.warning("输入的活动开始时间格式错误");
+      if (!timePattern.test(beginHms) || !timePattern.test(endHms)) {
+        this.$message.warning('活动开始/结束时间须为合法的 24 小时制时间');
         return;
       }
-      if(!timePattern.test(this.form.end)){
-        this.$message.warning("输入的活动结束时间格式错误");
+      if (!this.form.deadline) {
+        this.$message.warning('请填写报名截止时间');
         return;
       }
-      // 格式化日期
+      const deadlineDt = this.form.deadline instanceof Date ? this.form.deadline : new Date(this.form.deadline);
+      if (Number.isNaN(deadlineDt.getTime())) {
+        this.$message.warning('报名截止时间无效');
+        return;
+      }
+
       const formatDateString = (dateString) => {
         if (!dateString) return '';
         const date = new Date(dateString);
+        if (Number.isNaN(date.getTime())) return '';
         const year = date.getFullYear();
         const month = date.getMonth() + 1 < 10 ? '0' + (date.getMonth() + 1) : date.getMonth() + 1;
         const day = date.getDate() < 10 ? '0' + date.getDate() : date.getDate();
         return `${year}-${month}-${day}`;
       };
-      // 在这个方法中获取搜索框中的数据
-      const data = {};
-      for (const key in this.form) {
-        if (!this.isFormItemDisabled(key)) {
-          data[key] = this.form[key];
-        }
+
+      const dateStr = formatDateString(this.form.date);
+      if (!dateStr) {
+        this.$message.warning('请填写活动日期');
+        return;
       }
-      // 格式化截止时间
-      //data.deadline = format(data.deadline, "yyyy-MM-dd'T'HH:mm:ss", { timeZone: 'Asia/BeiJing' });
-      // 格式化日期
-      data.date = formatDateString(data.date);
+
+      const data = {
+        id: this.form.id != null ? Number(this.form.id) : undefined,
+        title: this.form.title,
+        quota: this.form.quota != null ? Number(this.form.quota) : undefined,
+        deadline: format(deadlineDt, "yyyy-MM-dd'T'HH:mm:ss", { timeZone: 'Asia/Shanghai' }),
+        date: dateStr,
+        begin: beginHms,
+        end: endHms,
+        address: this.form.address,
+        oldId: this.form.oldId != null && this.form.oldId !== '' ? Number(this.form.oldId) : undefined,
+        phone: this.form.phone,
+        description: this.form.description,
+        status: this.form.status != null && this.form.status !== '' ? Number(this.form.status) : undefined,
+        remain: this.form.remain != null ? Number(this.form.remain) : undefined,
+        message: this.form.message,
+        volunteerReward: Number(this.form.volunteerReward ?? 0),
+      };
+
       request.put('/administrator',data)
         .then(response => {
           if(response.code === 1){

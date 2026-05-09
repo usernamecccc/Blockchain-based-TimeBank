@@ -54,6 +54,7 @@ CREATE TABLE IF NOT EXISTS activity (
   update_time DATETIME DEFAULT NULL,
   message VARCHAR(512) DEFAULT NULL,
   remain SMALLINT NOT NULL DEFAULT 0,
+  volunteer_reward INT NOT NULL DEFAULT 0,
   CONSTRAINT fk_act_old FOREIGN KEY (old_id) REFERENCES old(id),
   CONSTRAINT fk_act_admi FOREIGN KEY (administrator_id) REFERENCES administrator(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
@@ -72,6 +73,7 @@ CREATE TABLE IF NOT EXISTS activity_volunteer (
   volunteer_id INT NOT NULL,
   status SMALLINT DEFAULT NULL,
   sign SMALLINT DEFAULT NULL,
+  reward_paid SMALLINT NOT NULL DEFAULT 0,
   create_time DATETIME DEFAULT NULL,
   update_time DATETIME DEFAULT NULL,
   UNIQUE KEY uk_act_vol (activity_id, volunteer_id),

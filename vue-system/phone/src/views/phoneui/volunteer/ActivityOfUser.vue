@@ -22,6 +22,7 @@
                                 <el-tag size="mini" v-if="!isBeforeDeadline(row.deadline)" type="danger">报名结束</el-tag>
                                 <el-tag size="mini" v-else type="success">报名中</el-tag>
                                 </div>
+                                <div v-if="Number(row.volunteerReward) > 0" style="font-size: 13px;color: #67C23A;margin-top: 4px;">答谢：每人 {{ row.volunteerReward }} 时间币</div>
                                 <div style="font-size: 12px;">地址：{{ row.address }}</div>
                             </div>
                             </div>

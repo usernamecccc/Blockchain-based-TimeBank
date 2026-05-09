@@ -51,7 +51,10 @@
                 message=#{message},
             </if>
             <if test="remain!=null">
-                remain=#{remain}
+                remain=#{remain},
+            </if>
+            <if test="volunteerReward!=null">
+                volunteer_reward=#{volunteerReward}
             </if>
         </set>
 

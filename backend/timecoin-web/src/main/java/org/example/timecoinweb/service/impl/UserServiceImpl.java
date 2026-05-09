@@ -14,9 +14,11 @@ import org.example.timecoinweb.service.TimeCoinChainService;
 import org.example.timecoinweb.service.UserService;
 import org.example.utils.DistanceUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.dao.DataAccessException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.util.StringUtils;
 
 import java.math.BigInteger;
@@ -45,6 +47,9 @@ public class UserServiceImpl implements UserService {
     BlockchainProperties blockchainProperties;
     @Autowired
     TimeCoinChainService timeCoinChainService;
+    @Autowired
+    @Qualifier("volunteerRewardMarkTemplate")
+    TransactionTemplate volunteerRewardMarkTemplate;
 
     /**
      * 老人增加活动
@@ -68,6 +73,8 @@ public class UserServiceImpl implements UserService {
         }
         activity.setAdministratorId(administratorTableId);
 
+        normalizeVolunteerRewardForPublish(activity);
+
         chargePublishFeeOnChain(userId);
 
         // 老人自主发布：提交待审核（1）
@@ -75,6 +82,22 @@ public class UserServiceImpl implements UserService {
 
         //将这个活动存入活动表
         activityMapper.insert(activity);
+    }
+
+    /** 移动端发布活动：校验每人答谢时间币上限；null 当作 0。 */
+    private void normalizeVolunteerRewardForPublish(Activity activity) {
+        Integer r = activity.getVolunteerReward();
+        if (r == null) {
+            activity.setVolunteerReward(0);
+            return;
+        }
+        if (r < 0) {
+            throw new IllegalArgumentException("答谢时间币不能为负数");
+        }
+        BigInteger max = blockchainProperties.getVolunteerRewardMax();
+        if (max != null && max.signum() > 0 && BigInteger.valueOf(r).compareTo(max) > 0) {
+            throw new IllegalArgumentException("答谢时间币不能超过单次上限 " + max);
+        }
     }
 
     /**
@@ -253,15 +276,85 @@ public class UserServiceImpl implements UserService {
         return pageBean;
     }
 
+    /**
+     * 老人将志愿者标记「完成」且活动设有答谢时：在本次事务内对已报名行加锁后继签链上答谢，再进行状态写入。
+     */
+    @Transactional(rollbackFor = Exception.class)
     @Override
     public void updateVolActivity(VolActivity volActivity) {
-        //找到志愿者id
-        Integer volId=volMapper.selectVolId(volActivity.getUserId());
+        Integer volId = volMapper.selectVolId(volActivity.getUserId());
         volActivity.setVolId(volId);
-        //updateTime更新
+
+        Short newStatus = volActivity.getStatus();
+
+        Activity activitySnap = null;
+        VolActivity locked = null;
+
+        boolean becomingCompleted = false;
+        if (newStatus != null && newStatus == 1) {
+            locked = volMapper.lockVolunteerActivityRow(volActivity.getActivityId(), volId);
+            if (locked == null) {
+                throw new IllegalStateException("未找到该志愿者的报名信息");
+            }
+            becomingCompleted = locked.getStatus() == null || locked.getStatus() != 1;
+            activitySnap = activityMapper.selectByActId(volActivity.getActivityId());
+            if (activitySnap == null) {
+                throw new IllegalStateException("活动不存在");
+            }
+        }
+
+        if (becomingCompleted) {
+            int rewardPerVolunteer =
+                    activitySnap.getVolunteerReward() == null ? 0 : activitySnap.getVolunteerReward();
+            boolean unpaid = locked.getRewardPaid() == null || locked.getRewardPaid() != 1;
+            if (rewardPerVolunteer > 0 && unpaid) {
+                if (!blockchainProperties.isEnabled() || !timeCoinChainService.isChainReady()) {
+                    throw new IllegalStateException(
+                            "本活动设置了志愿者答谢时间币，当前区块链不可用，无法标记完成。请稍后重试或先在发布端将答谢改为 0。");
+                }
+                transferVolunteerRewardOnChain(activitySnap, volId, rewardPerVolunteer);
+            }
+        }
+
         volActivity.setUpdateTime(LocalDateTime.now());
-        //更新actVol中间表
         volMapper.update(volActivity);
+    }
+
+    /** 每名志愿者仅能成功答谢一次（行锁 + reward_paid 独立提交，避免标记完成失败后链上双重划转）。链上不可逆。 */
+    private void transferVolunteerRewardOnChain(Activity act, int volunteerTableId, int rewardUnits) throws IllegalStateException {
+        Integer elderUserId = oldMapper.selectUserId(act.getOldId());
+        Integer volunteerUserId = volMapper.selectUserId(volunteerTableId);
+        if (elderUserId == null || volunteerUserId == null) {
+            throw new IllegalStateException("无法解析老人或志愿者的用户编号，无法进行链上答谢");
+        }
+        BigInteger amount = BigInteger.valueOf(rewardUnits);
+        String fromId = String.valueOf(elderUserId);
+        String toId = String.valueOf(volunteerUserId);
+        try {
+            BigInteger balance = timeCoinChainService.balanceOf(fromId);
+            if (balance.compareTo(amount) < 0) {
+                throw new IllegalStateException(
+                        "老人链上余额不足本次答谢所需 " + amount + " 时间币，当前余额 " + balance + "（请先为该老人 mint 或减少答谢金额后再标记完成）");
+            }
+            timeCoinChainService.transfer(fromId, toId, amount);
+            volunteerRewardMarkTemplate.executeWithoutResult(status -> {
+                int marked = volMapper.setVolunteerRewardPaid(act.getId(), volunteerTableId, LocalDateTime.now());
+                if (marked != 1) {
+                    log.error(
+                            "链上答谢已成功但标记 reward_paid 失败 activityId={} volunteerTableId={}",
+                            act.getId(),
+                            volunteerTableId);
+                    throw new IllegalStateException(
+                            "答谢已上链但标记答谢状态失败，请勿重复划转，请联系管理员在库中校准 reward_paid 与链上余额。");
+                }
+            });
+        } catch (IllegalStateException e) {
+            throw e;
+        } catch (Exception e) {
+            log.warn(
+                    "志愿者答谢划转失败 activityId={} volunteerTableId={}", act.getId(), volunteerTableId, e);
+            throw new IllegalStateException("链上答谢失败：" + e.getMessage());
+        }
     }
 
     @Override

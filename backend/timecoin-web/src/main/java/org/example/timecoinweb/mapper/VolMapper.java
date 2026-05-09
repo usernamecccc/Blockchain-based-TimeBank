@@ -5,8 +5,6 @@ import org.example.pojo.Activity;
 import org.example.pojo.User;
 import org.example.pojo.Vol;
 import org.example.pojo.VolActivity;
-import org.springframework.transaction.annotation.Transactional;
-
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -143,15 +141,15 @@ public interface VolMapper {
      * @param volId
      * @return
      */
-    @Select("select id, volunteer_id as volId, activity_id, status, create_time, update_time, sign from activity_volunteer where activity_id=#{activityId} and volunteer_id=#{volId}")
-    @Results({
-            @Result(property = "id",column = "id"),
-            @Result(property = "volId",column = "volId"),
-            @Result(property = "activityId",column = "activity_id"),
-            @Result(property = "status",column = "status"),
-            @Result(property = "createTime",column = "create_time"),
-            @Result(property = "updateTime",column = "updateTime"),
-            @Result(property = "sign",column = "sign")
-    })
+    @Select("select id, volunteer_id as volId, activity_id as activityId, status, create_time as createTime, update_time as updateTime, sign, reward_paid as rewardPaid from activity_volunteer where activity_id=#{activityId} and volunteer_id=#{volId}")
     VolActivity volSelectByActVolId(@Param("activityId") Integer activityId,@Param("volId") Integer volId);
+
+    /**
+     * 行级锁（须在事务内调用），防止并发标记完成导致重复答谢。
+     */
+    @Select("select id, volunteer_id as volId, activity_id as activityId, status, create_time as createTime, update_time as updateTime, sign, reward_paid as rewardPaid from activity_volunteer where activity_id=#{activityId} and volunteer_id=#{volId} for update")
+    VolActivity lockVolunteerActivityRow(@Param("activityId") Integer activityId, @Param("volId") Integer volId);
+
+    @Update("update activity_volunteer set reward_paid=1, update_time=#{updateTime} where activity_id=#{activityId} and volunteer_id=#{volId} and reward_paid=0")
+    int setVolunteerRewardPaid(@Param("activityId") Integer activityId, @Param("volId") Integer volId, @Param("updateTime") LocalDateTime updateTime);
 }

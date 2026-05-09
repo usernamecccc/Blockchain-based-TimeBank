@@ -50,10 +50,14 @@ public class SelfController {
                 blockchainProperties.isEnabled()
                         && timeCoinChainService.isChainReady()
                         && cost.signum() > 0;
+        BigInteger vmax = blockchainProperties.getVolunteerRewardMax();
+        boolean rewardCapped = vmax != null && vmax.signum() > 0;
         Map<String, Object> body = new HashMap<>();
         body.put("cost", cost.toString());
         body.put("deductEnabled", deduct);
         body.put("feeRecipientUserId", blockchainProperties.getFeeRecipientUserId());
+        body.put("volunteerRewardMax", rewardCapped ? vmax.toString() : null);
+        body.put("volunteerRewardMaxCapped", rewardCapped);
         return Result.success(body);
     }
 

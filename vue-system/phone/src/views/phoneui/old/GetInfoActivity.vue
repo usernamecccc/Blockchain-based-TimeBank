@@ -7,6 +7,17 @@
             <el-form-item prop="quota">
                 <el-input-number v-model="form.quota" :min="1" class="w-full-input-number"></el-input-number>
             </el-form-item>
+            <el-form-item prop="volunteerReward">
+                <div class="field-hint" v-if="volunteerRewardMaxCapped">每人答谢时间币（完成后支付，至多 {{ volunteerRewardDisplayMax }}）</div>
+                <div class="field-hint" v-else>每人答谢时间币（完成后支付，0 表示不答谢）</div>
+                <el-input-number
+                    v-model="form.volunteerReward"
+                    :min="0"
+                    :max="volunteerRewardInputMax"
+                    :precision="0"
+                    class="w-full-input-number"
+                ></el-input-number>
+            </el-form-item>
             <div class="form-region">
                 <div class="form-region__title">报名截止</div>
                 <el-form-item prop="deadlineDay">
@@ -77,6 +88,7 @@
 
 <script>
 import { format } from 'date-fns-tz';
+import request from '@/utils/request';
 
 /** 只能选择 15 分钟档：下拉分钟取值（仅四种） */
 const QUARTER_MINUTES = Object.freeze([0, 15, 30, 45]);
@@ -94,6 +106,7 @@ function emptyFormModel() {
         endHour: null,
         endMinute: null,
         description: '',
+        volunteerReward: 0,
     };
 }
 
@@ -127,6 +140,8 @@ export default {
                 }
             }]),
             form: emptyFormModel(),
+            volunteerRewardMaxCapped: true,
+            volunteerRewardDisplayMax: '999',
             rules: {
                 title: [{ required: true, message: '请输入活动标题', trigger: 'blur' }],
                 quota: [{ required: true, message: '请输入活动名额', trigger: 'blur' }],
@@ -225,8 +240,54 @@ export default {
                     { pattern: /^(\(\d{3,4}\)|\d{3,4}-|\s)?\d{7,14}$/, message: '请输入正确的电话号码', trigger: 'blur' }
                 ],
                 description: [{ required: true, message: '请输入活动描述', trigger: 'blur' }],
+                volunteerReward: [
+                    {
+                        validator: (_, val, cb) => {
+                            if (val === null || val === undefined || val === '') {
+                                cb();
+                                return;
+                            }
+                            const n = Number(val);
+                            if (!Number.isFinite(n) || n < 0) {
+                                cb(new Error('答谢时间币须为非负数'));
+                                return;
+                            }
+                            if (this.volunteerRewardMaxCapped) {
+                                const cap = Number(this.volunteerRewardDisplayMax);
+                                if (Number.isFinite(cap) && n > cap) {
+                                    cb(new Error(`答谢时间币不能超过 ${cap}`));
+                                    return;
+                                }
+                            }
+                            cb();
+                        },
+                        trigger: 'change',
+                    },
+                ],
             }
         };
+    },
+    computed: {
+        volunteerRewardInputMax() {
+            if (!this.volunteerRewardMaxCapped) {
+                return 999999;
+            }
+            const n = parseInt(String(this.volunteerRewardDisplayMax), 10);
+            return Number.isFinite(n) && n > 0 ? n : 999999;
+        },
+    },
+    mounted() {
+        request
+            .get('/info/publishActivityFee')
+            .then((res) => {
+                if (res.code === 1 && res.data && res.data.volunteerRewardMaxCapped === false) {
+                    this.volunteerRewardMaxCapped = false;
+                } else if (res.code === 1 && res.data && res.data.volunteerRewardMax) {
+                    this.volunteerRewardDisplayMax = String(res.data.volunteerRewardMax);
+                    this.volunteerRewardMaxCapped = true;
+                }
+            })
+            .catch(() => {});
     },
     methods: {
         formatHourLabel(h) {
@@ -404,6 +465,13 @@ export default {
 <style lang="scss" scoped>
 .get-info-plain {
     padding: 20px;
+}
+
+.field-hint {
+    font-size: 12px;
+    color: #909399;
+    margin-bottom: 6px;
+    line-height: 1.4;
 }
 
 .form-region {
