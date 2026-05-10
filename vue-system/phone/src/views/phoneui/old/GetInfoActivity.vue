@@ -1,5 +1,42 @@
 <template>
     <div class="get-info-plain">
+        <div class="ai-draft-box" :class="{ expanded: aiDraftOpen }">
+            <div class="ai-draft-bar" @click="aiDraftOpen = !aiDraftOpen">
+                <div>
+                    <div class="ai-draft-title">AI发布助手</div>
+                    <div class="ai-draft-subtitle">{{ aiDraft ? aiDraft.title : '用一句话生成活动草稿' }}</div>
+                </div>
+                <el-button size="mini" type="text">{{ aiDraftOpen ? '收起' : '展开' }}</el-button>
+            </div>
+            <div v-show="aiDraftOpen" class="ai-draft-content">
+                <div class="ai-draft-input-row">
+                    <el-input
+                        v-model="aiDraftText"
+                        size="small"
+                        placeholder="例如：明天下午想找志愿者陪我去医院"
+                        @keyup.enter.native="generateActivityDraft"
+                    ></el-input>
+                    <el-button size="small" type="primary" :loading="aiDraftLoading" @click="generateActivityDraft">生成</el-button>
+                </div>
+                <div v-if="aiDraft" class="ai-draft-result">
+                    <div class="ai-draft-result-head">
+                        <span>{{ aiDraft.title }}</span>
+                        <el-button size="mini" type="primary" plain @click="applyActivityDraft">填入表单</el-button>
+                    </div>
+                    <div class="ai-draft-result-desc">{{ aiDraft.description }}</div>
+                    <div v-if="compactDraftTips.length" class="ai-draft-tags">
+                        <el-tag
+                            v-for="item in compactDraftTips"
+                            :key="item"
+                            size="mini"
+                            :type="draftWarningSet[item] ? 'warning' : 'info'"
+                        >
+                            {{ item }}
+                        </el-tag>
+                    </div>
+                </div>
+            </div>
+        </div>
         <el-form ref="form" :model="form" label-width="0" :rules="rules">
             <el-form-item prop="title">
                 <el-input v-model="form.title" placeholder="活动标题"></el-input>
@@ -140,6 +177,10 @@ export default {
                 }
             }]),
             form: emptyFormModel(),
+            aiDraftText: '',
+            aiDraft: null,
+            aiDraftLoading: false,
+            aiDraftOpen: false,
             volunteerRewardMaxCapped: true,
             volunteerRewardDisplayMax: '999',
             rules: {
@@ -268,6 +309,21 @@ export default {
         };
     },
     computed: {
+        compactDraftTips() {
+            if (!this.aiDraft) return [];
+            const suggestions = Array.isArray(this.aiDraft.suggestions) ? this.aiDraft.suggestions.slice(0, 2) : [];
+            const warnings = Array.isArray(this.aiDraft.warnings) ? this.aiDraft.warnings.slice(0, 1) : [];
+            return suggestions.concat(warnings);
+        },
+        draftWarningSet() {
+            const map = {};
+            if (this.aiDraft && Array.isArray(this.aiDraft.warnings)) {
+                this.aiDraft.warnings.forEach((item) => {
+                    map[item] = true;
+                });
+            }
+            return map;
+        },
         volunteerRewardInputMax() {
             if (!this.volunteerRewardMaxCapped) {
                 return 999999;
@@ -447,6 +503,39 @@ export default {
                 }
             });
         },
+        generateActivityDraft() {
+            const text = (this.aiDraftText || '').trim();
+            if (!text) {
+                this.$message.warning('请先描述你的服务需求');
+                return;
+            }
+            this.aiDraftLoading = true;
+            request.post('/users/old/ai/activity-draft', { text }, { timeout: 150000 })
+                .then((response) => {
+                    if (response.code === 1 && response.data) {
+                        this.aiDraft = response.data;
+                        this.$message.success('已生成活动草稿');
+                    } else {
+                        this.$message.error(response.msg || 'AI草稿生成失败');
+                    }
+                })
+                .catch(() => {
+                    this.$message.error('AI服务暂时不可用');
+                })
+                .finally(() => {
+                    this.aiDraftLoading = false;
+                });
+        },
+        applyActivityDraft() {
+            if (!this.aiDraft) return;
+            if (this.aiDraft.title) this.form.title = this.aiDraft.title;
+            if (this.aiDraft.description) this.form.description = this.aiDraft.description;
+            if (this.aiDraft.quota) this.form.quota = Number(this.aiDraft.quota);
+            if (this.aiDraft.volunteerReward !== undefined && this.aiDraft.volunteerReward !== null) {
+                this.form.volunteerReward = Number(this.aiDraft.volunteerReward);
+            }
+            this.$message.success('已填入表单，请继续补充时间和地址');
+        },
         handleCancel() {
             this.$router.push('/serverOld');
         },
@@ -465,6 +554,80 @@ export default {
 <style lang="scss" scoped>
 .get-info-plain {
     padding: 20px;
+}
+
+.ai-draft-box {
+    padding: 0;
+    margin-bottom: 16px;
+    border: 1px solid #dcdfe6;
+    border-radius: 8px;
+    background: #ffffff;
+    box-sizing: border-box;
+    overflow: hidden;
+}
+
+.ai-draft-box.expanded {
+    box-shadow: 0 2px 8px rgba(31, 45, 61, 0.08);
+}
+
+.ai-draft-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 12px;
+    cursor: pointer;
+}
+
+.ai-draft-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: #303133;
+}
+
+.ai-draft-subtitle {
+    margin-top: 2px;
+    font-size: 12px;
+    color: #909399;
+}
+
+.ai-draft-content {
+    padding: 0 12px 12px;
+}
+
+.ai-draft-input-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.ai-draft-result {
+    margin-top: 10px;
+    padding: 8px;
+    border-radius: 8px;
+    background: #f5f7fb;
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.ai-draft-result-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    font-weight: 600;
+    color: #303133;
+}
+
+.ai-draft-result-desc {
+    margin-top: 4px;
+    color: #606266;
+}
+
+.ai-draft-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 8px;
 }
 
 .field-hint {

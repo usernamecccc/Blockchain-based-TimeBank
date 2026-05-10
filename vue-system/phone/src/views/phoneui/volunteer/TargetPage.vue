@@ -18,6 +18,32 @@
         <el-button type="primary" round style="width: 80%;" @click="signUp" v-if="showJoinButton">点击报名</el-button>
         <el-button type="warning" round plain style="width: 80%;" @click="cancelEnrollment" v-if="showCancelButton">取消报名</el-button>
         <div v-if="alreadyEnrolled && enrollmentChecked" style="margin-top:10px;font-size:13px;color:#67c23a;">您已报名该活动</div>
+        <div class="ai-prepare-inline">
+          <el-button size="mini" type="text" :loading="aiPrepareLoading" @click="generatePreparation">
+            {{ aiPrepare ? '刷新服务准备建议' : '生成服务准备建议' }}
+          </el-button>
+          <el-collapse v-if="aiPrepare" v-model="aiPreparePanels" accordion>
+            <el-collapse-item name="prepare">
+              <template slot="title">
+                <span class="ai-prepare-title">AI准备：{{ aiPrepare.summary }}</span>
+              </template>
+              <div class="ai-prepare-grid">
+                <div v-if="aiPrepare.checklist && aiPrepare.checklist.length">
+                  <div class="ai-prepare-section-title">准备清单</div>
+                  <div v-for="item in aiPrepare.checklist" :key="item" class="ai-prepare-item">· {{ item }}</div>
+                </div>
+                <div v-if="aiPrepare.communicationTips && aiPrepare.communicationTips.length">
+                  <div class="ai-prepare-section-title">沟通建议</div>
+                  <div v-for="item in aiPrepare.communicationTips" :key="item" class="ai-prepare-item">· {{ item }}</div>
+                </div>
+                <div v-if="aiPrepare.riskTips && aiPrepare.riskTips.length" class="warning">
+                  <div class="ai-prepare-section-title">风险提醒</div>
+                  <div v-for="item in aiPrepare.riskTips" :key="item" class="ai-prepare-item">· {{ item }}</div>
+                </div>
+              </div>
+            </el-collapse-item>
+          </el-collapse>
+        </div>
       </div>
       <div class="content">
         <el-form ref="form" :model="form" label-width="100px" style="width: 100%;">
@@ -84,6 +110,9 @@ export default {
             alreadyEnrolled: false,
             /** 是否已请求过报名状态（避免未返回前误显按钮） */
             enrollmentChecked: false,
+            aiPrepare: null,
+            aiPrepareLoading: false,
+            aiPreparePanels: '',
             // 日期表
             pickerOptionsofsearch: {
                 disabledDate(time) {
@@ -279,6 +308,28 @@ export default {
                 .catch((error) => {
                     console.error('取消报名失败:', error);
                 });
+        },
+        generatePreparation() {
+            if (!this.form || !this.form.id) {
+                this.$message.warning('活动信息还未加载完成');
+                return;
+            }
+            this.aiPrepareLoading = true;
+            request.post('/users/vol/ai/activity-prepare', { activity: this.form }, { timeout: 150000 })
+                .then((response) => {
+                    if (response.code === 1 && response.data) {
+                        this.aiPrepare = response.data;
+                        this.aiPreparePanels = 'prepare';
+                    } else {
+                        this.$message.error(response.msg || 'AI准备建议生成失败');
+                    }
+                })
+                .catch(() => {
+                    this.$message.error('AI服务暂时不可用');
+                })
+                .finally(() => {
+                    this.aiPrepareLoading = false;
+                });
         }
     }
 }
@@ -307,6 +358,60 @@ export default {
     justify-content: center;
     align-items: center;
     padding: 20px;
+  }
+
+  .ai-prepare-inline {
+    width: 100%;
+    margin-top: 8px;
+    border-top: 1px solid #ebeef5;
+    padding-top: 6px;
+  }
+
+  .ai-prepare-inline ::v-deep .el-collapse {
+    width: 100%;
+    border-top: none;
+    border-bottom: none;
+  }
+
+  .ai-prepare-inline ::v-deep .el-collapse-item__header {
+    height: auto;
+    min-height: 36px;
+    line-height: 1.35;
+    padding: 6px 0;
+    border-bottom: none;
+  }
+
+  .ai-prepare-title {
+    display: block;
+    max-width: 95%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 13px;
+    font-weight: 600;
+    color: #303133;
+  }
+
+  .ai-prepare-grid {
+    display: grid;
+    gap: 8px;
+    width: 100%;
+    text-align: left;
+    font-size: 13px;
+    line-height: 1.45;
+  }
+
+  .ai-prepare-item {
+    color: #606266;
+  }
+
+  .warning .ai-prepare-item {
+    color: #e6a23c;
+  }
+
+  .ai-prepare-section-title {
+    font-weight: 600;
+    margin-bottom: 4px;
   }
 
 }

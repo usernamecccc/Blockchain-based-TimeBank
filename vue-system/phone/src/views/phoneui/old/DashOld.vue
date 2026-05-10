@@ -13,7 +13,7 @@
             <span class="link-container">
                 <router-link to="/artificialOld" class="RouterLink">
                     <i class="el-icon-s-comment icon"></i>
-                    <div class="text">人工服务</div>
+                    <div class="text">AI服务</div>
                 </router-link>
             </span>
             <span class="link-container" style="margin-right: 35px;">

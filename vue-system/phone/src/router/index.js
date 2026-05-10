@@ -10,6 +10,7 @@ import TargetPage from '@/views/phoneui/volunteer/TargetPage.vue'
 import ActivityOfUser from '@/views/phoneui/volunteer/ActivityOfUser.vue'
 import RegisteredActivity from '@/views/phoneui/volunteer/RegisteredActivity.vue'
 import SignInUser from '@/views/phoneui/volunteer/SignInUser.vue'
+import ArtificialVolunteer from '@/views/phoneui/volunteer/ArtificialVolunteer.vue'
 import HomeOld from '@/views/phoneui/old/HomeOld.vue'
 import ActivityOld from '@/views/phoneui/old/ActivityOld.vue'
 import AddActivityOld from '@/views/phoneui/old/AddActivityOld.vue'
@@ -71,6 +72,13 @@ const routes = [
         path: '/infoOfUserPhone',
         name: 'InfoOfUserPhone',
         component: InfoOfUserPhone,
+        beforeEnter: requireAuth,
+        meta: { hideMobileBack: true },
+      },
+      {
+        path: '/artificialVolunteer',
+        name: 'ArtificialVolunteer',
+        component: ArtificialVolunteer,
         beforeEnter: requireAuth,
         meta: { hideMobileBack: true },
       },

@@ -128,6 +128,32 @@
       direction="ltr"
       :append-to-body="true"
       :modal-append-to-body="false">
+      <div class="ai-review-panel">
+        <div class="ai-review-header">
+          <div>
+            <span>AI审核辅助</span>
+            <el-tag v-if="aiReview" size="mini" :type="reviewTagType(aiReview.recommendation)">
+              {{ reviewRecommendationText(aiReview.recommendation) }}
+            </el-tag>
+          </div>
+          <div class="ai-review-actions">
+            <el-button v-if="aiReview" size="mini" type="text" @click="aiReviewExpanded = !aiReviewExpanded">
+              {{ aiReviewExpanded ? '收起' : '详情' }}
+            </el-button>
+            <el-button size="mini" type="primary" :loading="aiReviewLoading" @click="generateActivityReview">生成建议</el-button>
+          </div>
+        </div>
+        <div v-if="aiReview" class="ai-review-summary">{{ aiReview.summary }}</div>
+        <div v-if="aiReview && aiReviewExpanded" class="ai-review-body">
+          <div v-if="aiReview.issues && aiReview.issues.length" class="ai-review-list">
+            <div v-for="item in aiReview.issues" :key="item">· {{ item }}</div>
+          </div>
+          <div v-if="aiReview.suggestedMessage" class="ai-review-message">
+            建议说明：{{ aiReview.suggestedMessage }}
+          </div>
+          <el-button v-if="!formDisabled" size="mini" plain @click="applyReviewMessage">写入管理员建议</el-button>
+        </div>
+      </div>
       <el-form ref="form" :model="form" :disabled="formDisabled" label-width="100px">
         <el-form-item label="活动ID">
           <el-input v-model="form.id" :disabled='isFormIdDisabled'></el-input>
@@ -284,6 +310,9 @@ export default {
       formDisabled: true, // 禁用整个表单
       isFormIdDisabled: false,
       isFormRemainDisabled: false,
+      aiReview: null,
+      aiReviewLoading: false,
+      aiReviewExpanded: false,
       // 树控组件
       filterText: '',
       // 左侧分类：与业务库中 activity.status 对应（原「专业类」等为占位，无字段支撑）
@@ -492,11 +521,15 @@ export default {
     queryForm(rowData) {
       this.form = { ...rowData, volunteerReward: rowData.volunteerReward ?? 0 };
       this.formDisabled = true;
+      this.aiReview = null;
+      this.aiReviewExpanded = false;
       this.drawer = true;
     },
     editForm(rowData){
       this.form = { ...rowData, volunteerReward: rowData.volunteerReward ?? 0 };
       this.formDisabled = false;
+      this.aiReview = null;
+      this.aiReviewExpanded = false;
       this.drawer = true;
     },
     handleClose(done) {
@@ -583,6 +616,54 @@ export default {
           console.error('There was a problem with the request:', error);
         });
     },
+    generateActivityReview() {
+      if (!this.form || !this.form.id) {
+        this.$message.warning('请先选择活动');
+        return;
+      }
+      this.aiReviewLoading = true;
+      request.post('/users/administrator/ai/activity-review', { activity: this.form }, { timeout: 150000 })
+        .then((response) => {
+          if (response.code === 1 && response.data) {
+            this.aiReview = response.data;
+            this.aiReviewExpanded = false;
+          } else {
+            this.$message.error(response.msg || 'AI审核建议生成失败');
+          }
+        })
+        .catch(() => {
+          this.$message.error('AI服务暂时不可用');
+        })
+        .finally(() => {
+          this.aiReviewLoading = false;
+        });
+    },
+    reviewRecommendationText(value) {
+      const map = {
+        approve: '可通过',
+        revise: '需修改',
+        reject: '建议拒绝',
+      };
+      return map[value] || '仅供参考';
+    },
+    reviewTagType(value) {
+      const map = {
+        approve: 'success',
+        revise: 'warning',
+        reject: 'danger',
+      };
+      return map[value] || 'info';
+    },
+    applyReviewMessage() {
+      if (!this.aiReview || !this.aiReview.suggestedMessage) return;
+      this.form.message = this.aiReview.suggestedMessage;
+      if (this.aiReview.recommendation === 'approve') {
+        this.form.status = 2;
+      } else if (this.aiReview.recommendation === 'reject') {
+        this.form.status = 4;
+      }
+      this.$message.success('已写入审核建议');
+    },
     addTable(){
       // 使用 $router.push() 方法进行路由跳转
       this.$router.push('/addActivityView');
@@ -647,6 +728,50 @@ export default {
 .el-form-item {
   margin-right: 20px;
   margin-left: 20px;
+}
+.ai-review-panel {
+  margin: 0 20px 16px;
+  padding: 10px 12px;
+  border: 1px solid #dcdfe6;
+  border-radius: 8px;
+  background: #f8fbff;
+}
+.ai-review-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-weight: 600;
+  color: #303133;
+}
+.ai-review-header > div:first-child {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.ai-review-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.ai-review-body {
+  font-size: 13px;
+  line-height: 1.6;
+  color: #606266;
+}
+.ai-review-summary,
+.ai-review-list,
+.ai-review-message {
+  margin-bottom: 6px;
+}
+.ai-review-summary {
+  margin-top: 6px;
+  font-size: 13px;
+  color: #606266;
+  line-height: 1.5;
+}
+.ai-review-list {
+  margin-top: 6px;
+  color: #e6a23c;
 }
 .contentBox{
   display: flex;
