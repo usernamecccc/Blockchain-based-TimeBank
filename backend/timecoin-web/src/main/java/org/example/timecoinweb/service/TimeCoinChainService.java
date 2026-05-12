@@ -2,7 +2,9 @@ package org.example.timecoinweb.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.example.pojo.User;
 import org.example.timecoinweb.config.BlockchainProperties;
+import org.example.timecoinweb.mapper.UserMapper;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
@@ -49,6 +51,26 @@ public class TimeCoinChainService {
     private final BlockchainProperties blockchainProperties;
     private final ObjectProvider<Web3j> web3jProvider;
     private final ObjectProvider<Credentials> credentialsProvider;
+    private final UserMapper userMapper;
+
+    private String getUserNameOrDefault(String userIdStr, String defaultValue) {
+        if (!StringUtils.hasText(userIdStr) || "平台".equals(userIdStr)) {
+            return "平台";
+        }
+        try {
+            Integer userId = Integer.parseInt(userIdStr);
+            User user = userMapper.selectById(userId);
+            if (user != null && StringUtils.hasText(user.getName())) {
+                return user.getName();
+            }
+            if (user != null && StringUtils.hasText(user.getUsername())) {
+                return user.getUsername();
+            }
+        } catch (Exception e) {
+            log.warn("查询用户信息失败 userId={}", userIdStr, e);
+        }
+        return defaultValue;
+    }
 
     public boolean isChainReady() {
         if (!blockchainProperties.isEnabled()) {
@@ -325,5 +347,96 @@ public class TimeCoinChainService {
             out.add(row);
         }
         return out;
+    }
+
+    public List<Map<String, Object>> listUserMintTransferEvents(String userId, int limit) throws Exception {
+        requireReady();
+        if (limit <= 0 || !StringUtils.hasText(userId)) {
+            return Collections.emptyList();
+        }
+        List<Map<String, Object>> allEvents = listMintTransferEvents(limit * 2);
+        
+        List<Map<String, Object>> userEvents = new ArrayList<>();
+        for (Map<String, Object> event : allEvents) {
+            String type = (String) event.get("type");
+            String parties = (String) event.get("parties");
+            
+            if ("MINT".equals(type)) {
+                if (parties != null && parties.contains("用户 " + userId)) {
+                    Map<String, Object> copy = new HashMap<>(event);
+                    copy.put("direction", "IN");
+                    copy.put("counterparty", "平台");
+                    copy.put("counterpartyName", "平台");
+                    userEvents.add(copy);
+                }
+            } else if ("TRANSFER".equals(type)) {
+                if (parties != null) {
+                    String fromUserIdKey = "用户 ";
+                    String toUserIdKey = " → 用户 ";
+                    int fromStart = parties.indexOf(fromUserIdKey);
+                    int toStart = parties.indexOf(toUserIdKey);
+                    
+                    if (fromStart != -1 && toStart != -1) {
+                        String from = parties.substring(fromStart + fromUserIdKey.length(), toStart);
+                        String to = parties.substring(toStart + toUserIdKey.length());
+                        
+                        if (userId.equals(from)) {
+                            String counterparty = "platform".equalsIgnoreCase(to) ? "平台" : to;
+                            Map<String, Object> copy = new HashMap<>(event);
+                            copy.put("direction", "OUT");
+                            copy.put("counterparty", counterparty);
+                            copy.put("counterpartyName", getUserNameOrDefault(counterparty, counterparty));
+                            userEvents.add(copy);
+                        } else if (userId.equals(to)) {
+                            String counterparty = "platform".equalsIgnoreCase(from) ? "平台" : from;
+                            Map<String, Object> copy = new HashMap<>(event);
+                            copy.put("direction", "IN");
+                            copy.put("counterparty", counterparty);
+                            copy.put("counterpartyName", getUserNameOrDefault(counterparty, counterparty));
+                            userEvents.add(copy);
+                        }
+                    }
+                }
+            }
+            
+            if (userEvents.size() >= limit) {
+                break;
+            }
+        }
+        
+        return userEvents;
+    }
+
+    public Map<String, Object> listUserMintTransferEventsPaged(String userId, int page, int pageSize) throws Exception {
+        requireReady();
+        if (pageSize <= 0 || !StringUtils.hasText(userId)) {
+            Map<String, Object> empty = new HashMap<>();
+            empty.put("total", 0);
+            empty.put("page", page);
+            empty.put("pageSize", pageSize);
+            empty.put("totalPages", 0);
+            empty.put("rows", Collections.emptyList());
+            return empty;
+        }
+        int maxLimit = 2000;
+        List<Map<String, Object>> allEvents = listUserMintTransferEvents(userId, maxLimit);
+        
+        int total = allEvents.size();
+        int fromIndex = (page - 1) * pageSize;
+        int toIndex = Math.min(fromIndex + pageSize, total);
+        
+        Map<String, Object> result = new HashMap<>();
+        result.put("total", total);
+        result.put("page", page);
+        result.put("pageSize", pageSize);
+        result.put("totalPages", (int) Math.ceil((double) total / pageSize));
+        
+        if (fromIndex >= total) {
+            result.put("rows", Collections.emptyList());
+        } else {
+            result.put("rows", allEvents.subList(fromIndex, toIndex));
+        }
+        
+        return result;
     }
 }

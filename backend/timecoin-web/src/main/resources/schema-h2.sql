@@ -83,6 +83,18 @@ CREATE TABLE IF NOT EXISTS activity_volunteer (
   CONSTRAINT fk_av_vol FOREIGN KEY (volunteer_id) REFERENCES volunteer(id) ON DELETE CASCADE
 );
 
+CREATE TABLE IF NOT EXISTS compensation_record (
+  id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  activity_id INT NOT NULL,
+  volunteer_table_id INT NOT NULL,
+  elder_user_id INT NOT NULL,
+  amount INT NOT NULL,
+  status SMALLINT NOT NULL DEFAULT 0,
+  create_time TIMESTAMP DEFAULT NULL,
+  update_time TIMESTAMP DEFAULT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_compensation_status ON compensation_record(status);
+
 -- 默认管理员（仅当不存在时插入；PC 端可用 admin / 123456 登录）
 INSERT INTO `user` (username, name, password, role, email, age, phone, create_time, update_time)
 SELECT 'admin', '系统管理员', '123456', 3, 'admin@local', 30, '13800000000', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP

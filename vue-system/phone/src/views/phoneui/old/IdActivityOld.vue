@@ -95,21 +95,51 @@
                         <div class="cardContent">
                             <img :src="require('@/assets/common/header1.jpg')" class="image">
                             <div class="contentBox">
-                                <div style="font-size: 17px;">{{ row.name }}</div>
+                                <div style="font-size: 17px; font-weight: 600;">
+                                    {{ row.name }}
+                                    <el-tag v-if="!isVolunteerIncomplete(row)" type="success" size="small" style="margin-left: 8px;">
+                                        已完成
+                                    </el-tag>
+                                    <el-tag v-else type="info" size="small" style="margin-left: 8px;">
+                                        待完成
+                                    </el-tag>
+                                </div>
                                 <div style="font-size: 12px;">{{ row.phone }}</div>
                                 <div style="font-size: 12px;">{{ row.email }}</div>
-                                <!-- 删除按钮 -->
-                                <div style="display: flex;justify-content: center;align-items: center;">
-                                    <el-button v-if="!isEndSign" round size="mini"
+                                <div style="font-size: 12px; color: #909399; margin-top: 4px;">
+                                    <span v-if="row.rewardPaid === 1">
+                                        <el-icon class="el-icon-success" style="color: #67c23a; margin-right: 4px;"></el-icon>
+                                        答谢已支付
+                                    </span>
+                                    <span v-else-if="Number(form.volunteerReward || 0) > 0 && !isVolunteerIncomplete(row)">
+                                        <el-icon class="el-icon-circle-check" style="color: #409eff; margin-right: 4px;"></el-icon>
+                                        答谢待转账
+                                    </span>
+                                    <span v-else-if="Number(form.volunteerReward || 0) > 0">
+                                        <el-icon class="el-icon-time" style="color: #909399; margin-right: 4px;"></el-icon>
+                                        待标记并支付 {{ form.volunteerReward }} 时间币
+                                    </span>
+                                    <span v-else>
+                                        <el-icon class="el-icon-info" style="color: #909399; margin-right: 4px;"></el-icon>
+                                        无答谢
+                                    </span>
+                                </div>
+                                <div style="display: flex;justify-content: center;align-items: center; margin-top: 8px;">
+                                    <el-button v-if="!isEndSign" round size="mini" disabled
                                         style="margin-top: 5px;width: 45%;">服务未开始</el-button>
-                                    <el-button v-else-if="isEndSign && isVolunteerIncomplete(row)" type="primary" round
-                                        size="mini" @click="editUser(row.id)"
-                                        style="margin-top: 5px;width: 45%;">标记完成（链上答谢）</el-button>
-                                    <el-button v-else round size="mini" type="warning"
-                                        style="margin-top: 5px;width: 45%;"
-                                        plain
-                                        @click="editUser1(row.id)">撤回完成</el-button>
-                                    <el-button round size="mini" type="primary"
+                                    <el-button v-else-if="isEndSign && isVolunteerIncomplete(row)" type="success" round
+                                        size="mini" @click="editUser(row.id)" :loading="loadingIds.has(row.id)" :disabled="loadingIds.has(row.id)"
+                                        style="margin-top: 5px;width: 45%;">
+                                        <i class="el-icon-check" style="margin-right: 4px;"></i>
+                                        {{ loadingIds.has(row.id) ? '处理中...' : '标记完成' }}
+                                    </el-button>
+                                    <el-button v-else round size="mini" type="danger" plain
+                                        style="margin-top: 5px;width: 45%;" :loading="loadingIds.has(row.id)" :disabled="loadingIds.has(row.id)"
+                                        @click="editUser1(row.id)">
+                                        <i class="el-icon-refresh-left" style="margin-right: 4px;"></i>
+                                        {{ loadingIds.has(row.id) ? '处理中...' : '撤回完成' }}
+                                    </el-button>
+                                    <el-button round size="mini" type="primary" plain
                                         style="margin-top: 5px;width: 45%;">联系志愿者</el-button>
                                 </div>
                             </div>
@@ -138,6 +168,8 @@ export default {
             currentPage1: 1,
             deadline: '',
             isEndSign: false,
+            // 防止重复点击
+            loadingIds: new Set(),
             // 选择器
             options: [
                 { value: 1, label: '待审核' },
@@ -233,12 +265,19 @@ export default {
         },
         getIsEndSign() {
             const now = new Date();
-            const d = this.deadline;
-            if (!(d instanceof Date) || Number.isNaN(d.getTime())) {
+            if (!this.form.date || !this.form.begin) {
                 this.isEndSign = false;
                 return;
             }
-            this.isEndSign = d.getTime() < now.getTime();
+            try {
+                const activityDate = new Date(this.form.date);
+                const [hours, minutes] = this.form.begin.split(':');
+                activityDate.setHours(parseInt(hours, 10), parseInt(minutes, 10), 0, 0);
+                this.isEndSign = activityDate.getTime() <= now.getTime();
+            } catch (e) {
+                console.error('解析活动时间失败:', e);
+                this.isEndSign = false;
+            }
         },
         /** 后端可能返回 number / string / null */
         isVolunteerIncomplete(row) {
@@ -285,9 +324,8 @@ export default {
                         if (response.code === 1) {
                             this.totalItems = response.data.total;
                             this.originalData = response.data.rows;
-                            this.tableData = [];
-                            // 合并原始数据到 tableData 数组中
-                            this.tableData = [...this.tableData, ...this.originalData];
+                            // 替换而非追加，避免数据叠加
+                            this.tableData = this.originalData;
                             this.calculateDeadline();
                             this.getIsEndSign();
                             // 将新的数据作为Promise的结果返回
@@ -303,6 +341,8 @@ export default {
             });
         },
         editUser(id) {
+            if (this.loadingIds.has(id)) return;
+            this.loadingIds.add(id);
             let data = {
                 userId: id,
                 activityId: this.id,
@@ -320,9 +360,15 @@ export default {
                 })
                 .catch(error => {
                     console.error('There was a problem with the request:', error);
+                    this.$message.error(error.response?.data?.message || '操作失败，请检查网络或联系管理员');
+                })
+                .finally(() => {
+                    this.loadingIds.delete(id);
                 });
         },
         editUser1(id) {
+            if (this.loadingIds.has(id)) return;
+            this.loadingIds.add(id);
             let data = {
                 userId: id,
                 activityId: this.id,
@@ -339,6 +385,10 @@ export default {
                 })
                 .catch(error => {
                     console.error('There was a problem with the request:', error);
+                    this.$message.error(error.response?.data?.message || '操作失败，请检查网络或联系管理员');
+                })
+                .finally(() => {
+                    this.loadingIds.delete(id);
                 });
         },
         handleCancel() {

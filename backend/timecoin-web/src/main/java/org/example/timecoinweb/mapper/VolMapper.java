@@ -110,7 +110,7 @@ public interface VolMapper {
      * @return
      */
     @Select("select user.id,user.name,user.phone," +
-            "user.email,user.age,av.status,av.sign " +
+            "user.email,user.age,av.status,av.sign,av.reward_paid as rewardPaid " +
             "from user,activity_volunteer as av,volunteer as vol " +
             "where av.activity_id=#{activityId} and av.volunteer_id =vol.id and vol.user_id=user.id")
     List<Vol> selectUsers(@Param("activityId") Integer activityId);
@@ -149,7 +149,4 @@ public interface VolMapper {
      */
     @Select("select id, volunteer_id as volId, activity_id as activityId, status, create_time as createTime, update_time as updateTime, sign, reward_paid as rewardPaid from activity_volunteer where activity_id=#{activityId} and volunteer_id=#{volId} for update")
     VolActivity lockVolunteerActivityRow(@Param("activityId") Integer activityId, @Param("volId") Integer volId);
-
-    @Update("update activity_volunteer set reward_paid=1, update_time=#{updateTime} where activity_id=#{activityId} and volunteer_id=#{volId} and reward_paid=0")
-    int setVolunteerRewardPaid(@Param("activityId") Integer activityId, @Param("volId") Integer volId, @Param("updateTime") LocalDateTime updateTime);
 }

@@ -68,6 +68,12 @@
               <span v-if="!isCollapse" slot="title">时间币管理</span> 
             </el-menu-item>
           </router-link>
+          <router-link to="/compensationView" class="RouterLink">
+            <el-menu-item index="4a">
+              <i class="el-icon-refresh-left"></i>
+              <span v-if="!isCollapse" slot="title">待追讨记录</span>
+            </el-menu-item>
+          </router-link>
           <router-link to="/systemView" class="RouterLink">
             <el-menu-item index="5">
               <i class="el-icon-s-platform"></i>
@@ -160,6 +166,8 @@ export default {
             return '系统管理';
           case '/coinView':
             return '时间币管理';
+          case '/compensationView':
+            return '待追讨记录';
           case '/noticeManageView':
             return '公告管理';
           default:

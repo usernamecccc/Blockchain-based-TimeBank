@@ -7,6 +7,7 @@ import org.example.pojo.*;
 import org.example.timecoinweb.config.BlockchainProperties;
 import org.example.timecoinweb.mapper.ActivityMapper;
 import org.example.timecoinweb.mapper.AdmiMapper;
+import org.example.timecoinweb.mapper.CompensationMapper;
 import org.example.timecoinweb.mapper.OldMapper;
 import org.example.timecoinweb.mapper.UserMapper;
 import org.example.timecoinweb.mapper.VolMapper;
@@ -14,11 +15,9 @@ import org.example.timecoinweb.service.TimeCoinChainService;
 import org.example.timecoinweb.service.UserService;
 import org.example.utils.DistanceUtils;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.dao.DataAccessException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.util.StringUtils;
 
 import java.math.BigInteger;
@@ -48,8 +47,7 @@ public class UserServiceImpl implements UserService {
     @Autowired
     TimeCoinChainService timeCoinChainService;
     @Autowired
-    @Qualifier("volunteerRewardMarkTemplate")
-    TransactionTemplate volunteerRewardMarkTemplate;
+    CompensationMapper compensationMapper;
 
     /**
      * 老人增加活动
@@ -290,37 +288,67 @@ public class UserServiceImpl implements UserService {
         Activity activitySnap = null;
         VolActivity locked = null;
 
-        boolean becomingCompleted = false;
-        if (newStatus != null && newStatus == 1) {
-            locked = volMapper.lockVolunteerActivityRow(volActivity.getActivityId(), volId);
-            if (locked == null) {
-                throw new IllegalStateException("未找到该志愿者的报名信息");
-            }
-            becomingCompleted = locked.getStatus() == null || locked.getStatus() != 1;
+        boolean shouldPayReward = false;
+        
+        locked = volMapper.lockVolunteerActivityRow(volActivity.getActivityId(), volId);
+        if (locked == null) {
+            throw new IllegalStateException("未找到该志愿者的报名信息");
+        }
+
+        boolean isMarkingComplete = (newStatus != null && newStatus == 1);
+        boolean wasNotCompleted = locked.getStatus() == null || locked.getStatus() != 1;
+        boolean rewardNotPaid = locked.getRewardPaid() == null || locked.getRewardPaid() != 1;
+
+        if (isMarkingComplete) {
             activitySnap = activityMapper.selectByActId(volActivity.getActivityId());
             if (activitySnap == null) {
                 throw new IllegalStateException("活动不存在");
             }
-        }
-
-        if (becomingCompleted) {
+            
             int rewardPerVolunteer =
                     activitySnap.getVolunteerReward() == null ? 0 : activitySnap.getVolunteerReward();
-            boolean unpaid = locked.getRewardPaid() == null || locked.getRewardPaid() != 1;
-            if (rewardPerVolunteer > 0 && unpaid) {
+            shouldPayReward = wasNotCompleted && rewardPerVolunteer > 0 && rewardNotPaid;
+        }
+
+        if (isMarkingComplete) {
+            if (shouldPayReward) {
+                int rewardPerVolunteer =
+                        activitySnap.getVolunteerReward() == null ? 0 : activitySnap.getVolunteerReward();
                 if (!blockchainProperties.isEnabled() || !timeCoinChainService.isChainReady()) {
                     throw new IllegalStateException(
                             "本活动设置了志愿者答谢时间币，当前区块链不可用，无法标记完成。请稍后重试或先在发布端将答谢改为 0。");
                 }
                 transferVolunteerRewardOnChain(activitySnap, volId, rewardPerVolunteer);
+                volActivity.setRewardPaid((short) 1);
+            } else if (locked.getRewardPaid() != null) {
+                volActivity.setRewardPaid(locked.getRewardPaid());
             }
+        } else {
+            // 撤回完成：若已付过答谢，由平台垫付退还给老人
+            if (locked.getRewardPaid() != null && locked.getRewardPaid() == 1) {
+                activitySnap = activityMapper.selectByActId(volActivity.getActivityId());
+                if (activitySnap == null) {
+                    throw new IllegalStateException("活动不存在");
+                }
+                int rewardPerVolunteer =
+                        activitySnap.getVolunteerReward() == null ? 0 : activitySnap.getVolunteerReward();
+                if (rewardPerVolunteer > 0) {
+                    if (!blockchainProperties.isEnabled() || !timeCoinChainService.isChainReady()) {
+                        throw new IllegalStateException(
+                                "区块链不可用，无法执行平台垫付补偿，请稍后重试。");
+                    }
+                    Integer elderUserId = oldMapper.selectUserId(activitySnap.getOldId());
+                    compensateElderOnChain(activitySnap, volId, elderUserId, rewardPerVolunteer);
+                }
+            }
+            volActivity.setRewardPaid((short) 0);
         }
 
         volActivity.setUpdateTime(LocalDateTime.now());
         volMapper.update(volActivity);
     }
 
-    /** 每名志愿者仅能成功答谢一次（行锁 + reward_paid 独立提交，避免标记完成失败后链上双重划转）。链上不可逆。 */
+    /** 每名志愿者仅能成功答谢一次（行锁保障，同一事务内更新 status + reward_paid）。链上不可逆。 */
     private void transferVolunteerRewardOnChain(Activity act, int volunteerTableId, int rewardUnits) throws IllegalStateException {
         Integer elderUserId = oldMapper.selectUserId(act.getOldId());
         Integer volunteerUserId = volMapper.selectUserId(volunteerTableId);
@@ -337,23 +365,48 @@ public class UserServiceImpl implements UserService {
                         "老人链上余额不足本次答谢所需 " + amount + " 时间币，当前余额 " + balance + "（请先为该老人 mint 或减少答谢金额后再标记完成）");
             }
             timeCoinChainService.transfer(fromId, toId, amount);
-            volunteerRewardMarkTemplate.executeWithoutResult(status -> {
-                int marked = volMapper.setVolunteerRewardPaid(act.getId(), volunteerTableId, LocalDateTime.now());
-                if (marked != 1) {
-                    log.error(
-                            "链上答谢已成功但标记 reward_paid 失败 activityId={} volunteerTableId={}",
-                            act.getId(),
-                            volunteerTableId);
-                    throw new IllegalStateException(
-                            "答谢已上链但标记答谢状态失败，请勿重复划转，请联系管理员在库中校准 reward_paid 与链上余额。");
-                }
-            });
         } catch (IllegalStateException e) {
             throw e;
         } catch (Exception e) {
             log.warn(
                     "志愿者答谢划转失败 activityId={} volunteerTableId={}", act.getId(), volunteerTableId, e);
             throw new IllegalStateException("链上答谢失败：" + e.getMessage());
+        }
+    }
+
+    /** 老人撤回完成时，由平台账户垫付退还答谢时间币，并记录待追讨补偿。 */
+    private void compensateElderOnChain(Activity act, int volunteerTableId, Integer elderUserId, int rewardUnits) throws IllegalStateException {
+        if (elderUserId == null) {
+            throw new IllegalStateException("无法解析老人的用户编号，无法进行平台垫付");
+        }
+        BigInteger amount = BigInteger.valueOf(rewardUnits);
+        String fromId = blockchainProperties.getFeeRecipientUserId();
+        if (!StringUtils.hasText(fromId)) {
+            fromId = "platform";
+        }
+        String toId = String.valueOf(elderUserId);
+        try {
+            BigInteger balance = timeCoinChainService.balanceOf(fromId);
+            if (balance.compareTo(amount) < 0) {
+                throw new IllegalStateException(
+                        "平台账户余额不足本次垫付所需 " + amount + " 时间币，当前余额 " + balance + "，请联系管理员充值平台账户后再撤回。");
+            }
+            timeCoinChainService.transfer(fromId, toId, amount);
+            CompensationRecord record = new CompensationRecord();
+            record.setActivityId(act.getId());
+            record.setVolunteerTableId(volunteerTableId);
+            record.setElderUserId(elderUserId);
+            record.setAmount(rewardUnits);
+            record.setStatus((short) 0);
+            record.setCreateTime(LocalDateTime.now());
+            record.setUpdateTime(LocalDateTime.now());
+            compensationMapper.insert(record);
+        } catch (IllegalStateException e) {
+            throw e;
+        } catch (Exception e) {
+            log.warn("平台垫付补偿失败 activityId={} volunteerTableId={} elderUserId={}",
+                    act.getId(), volunteerTableId, elderUserId, e);
+            throw new IllegalStateException("平台垫付失败：" + e.getMessage());
         }
     }
 
