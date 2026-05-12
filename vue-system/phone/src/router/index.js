@@ -22,6 +22,7 @@ import ArtificialOld from '@/views/phoneui/old/ArtificialOld.vue'
 import IdActivityOld from '@/views/phoneui/old/IdActivityOld.vue'
 import DashOld from '@/views/phoneui/old/DashOld.vue'
 import CoinInfo from '@/views/phoneui/CoinInfo.vue'
+import CoinHistory from '@/views/phoneui/CoinHistory.vue'
 import DashPhone from '@/views/phoneui/volunteer/DashPhone.vue'
 import { requireAuth, loginrequireAuth } from '../utils/permission'
 
@@ -228,6 +229,15 @@ const routes = [
     beforeEnter: requireAuth,
     meta: {
       mobileBackTitle: '时间币详情',
+    },
+  },
+  {
+    path: '/coinHistory',
+    name: 'CoinHistory',
+    component: CoinHistory,
+    beforeEnter: requireAuth,
+    meta: {
+      mobileBackTitle: '转账历史',
     },
   },
 ]

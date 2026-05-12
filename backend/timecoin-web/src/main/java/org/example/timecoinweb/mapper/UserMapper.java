@@ -52,4 +52,7 @@ public interface UserMapper {
     /** 明确别名，避免 JDBC/MyBatis 在部分环境下将列名映射为大写或 count 保留字导致取不到键 */
     @Select("SELECT role AS user_role, COUNT(*) AS role_cnt FROM `user` GROUP BY role")
     List<java.util.Map<String, Object>> countUsersByRole();
+
+    @Select("select id, username, name, role from user where id = #{userId}")
+    User selectById(@Param("userId") Integer userId);
 }

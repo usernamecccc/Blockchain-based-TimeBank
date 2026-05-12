@@ -81,6 +81,18 @@ CREATE TABLE IF NOT EXISTS activity_volunteer (
   CONSTRAINT fk_av_vol FOREIGN KEY (volunteer_id) REFERENCES volunteer(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+CREATE TABLE IF NOT EXISTS compensation_record (
+  id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  activity_id INT NOT NULL,
+  volunteer_table_id INT NOT NULL,
+  elder_user_id INT NOT NULL,
+  amount INT NOT NULL,
+  status SMALLINT NOT NULL DEFAULT 0 COMMENT '0 待追讨 / 1 已追讨 / 2 平台核销',
+  create_time DATETIME DEFAULT NULL,
+  update_time DATETIME DEFAULT NULL,
+  INDEX idx_compensation_status (status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 INSERT INTO `user` (username, name, password, role, email, age, phone, create_time, update_time)
 SELECT 'admin', '系统管理员', '123456', 3, 'admin@local', 30, '13800000000', NOW(), NOW()
 FROM DUAL

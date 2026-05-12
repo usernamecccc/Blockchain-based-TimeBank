@@ -12,6 +12,9 @@
             <if test="sign!=null">
                 sign=#{sign},
             </if>
+            <if test="rewardPaid!=null">
+                reward_paid=#{rewardPaid},
+            </if>
             <if test="updateTime!=null">
                 update_time=#{updateTime},
             </if>

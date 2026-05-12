@@ -15,4 +15,5 @@ public class Vol {
     Short age;
     Short status;
     Short sign;
+    Short rewardPaid;
 }
