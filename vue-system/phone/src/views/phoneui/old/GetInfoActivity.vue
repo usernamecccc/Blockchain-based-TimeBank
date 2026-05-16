@@ -710,4 +710,90 @@ export default {
 .form-btn-row::v-deep .el-button {
     width: 48%;
 }
+
+.get-info-plain {
+    min-height: calc(100vh - 68px);
+    padding: 16px 14px 24px;
+    background: var(--old-bg);
+    color: var(--old-text);
+}
+
+.ai-draft-box {
+    border-color: var(--old-border);
+    border-radius: 14px;
+    background: var(--old-surface);
+    box-shadow: 0 5px 16px rgba(111, 76, 43, 0.10);
+}
+
+.ai-draft-bar {
+    padding: 14px;
+    min-height: 58px;
+}
+
+.ai-draft-title {
+    color: var(--old-primary-strong);
+    font-size: 17px;
+}
+
+.ai-draft-subtitle {
+    color: var(--old-muted);
+    font-size: 14px;
+    line-height: 1.45;
+}
+
+.ai-draft-input-row {
+    align-items: stretch;
+}
+
+.ai-draft-input-row ::v-deep .el-input__inner,
+.get-info-plain ::v-deep .el-input__inner,
+.get-info-plain ::v-deep .el-textarea__inner {
+    min-height: 48px;
+    border-color: var(--old-border);
+    border-radius: 10px;
+    font-size: 16px;
+    line-height: 1.5;
+}
+
+.get-info-plain ::v-deep .el-textarea__inner {
+    min-height: 112px !important;
+}
+
+.get-info-plain ::v-deep .el-button {
+    min-height: 46px;
+    border-radius: 10px;
+    font-size: 16px;
+    font-weight: 700;
+}
+
+.get-info-plain ::v-deep .el-button--primary {
+    background: var(--old-primary);
+    border-color: var(--old-primary);
+}
+
+.ai-draft-result {
+    border: 1px solid #f0d5af;
+    background: #e8f4f8;
+    font-size: 15px;
+}
+
+.form-region {
+    border-color: var(--old-border);
+    border-radius: 14px;
+    background: var(--old-surface);
+}
+
+.form-region__title {
+    color: var(--old-primary-strong);
+    font-size: 17px;
+}
+
+.field-hint {
+    color: var(--old-muted);
+    font-size: 14px;
+}
+
+.form-btn-row::v-deep .el-button {
+    min-height: 52px;
+}
 </style>

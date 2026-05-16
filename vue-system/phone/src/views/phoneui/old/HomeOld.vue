@@ -209,4 +209,90 @@ export default {
         }
     }
 }
+
+.infoBox {
+    min-height: calc(100vh - 130px);
+    background: var(--old-bg);
+    color: var(--old-text);
+    padding-bottom: 18px;
+}
+
+.infoBox .el-header {
+    height: 56px !important;
+    padding: 0 18px;
+}
+
+.infoBox .el-header ::v-deep .el-button {
+    min-width: 48px;
+    min-height: 48px;
+    color: var(--old-primary);
+}
+
+.infoBox .mainBox .titleBOX {
+    width: calc(100% - 28px) !important;
+    min-height: 162px;
+    height: auto !important;
+    border: 1px solid var(--old-border);
+    border-radius: 14px !important;
+    background: #ffffff;
+    box-shadow: 0 8px 22px rgba(111, 76, 43, 0.13) !important;
+}
+
+.infoBox .mainBox .titleBOX .titleBox {
+    margin-right: 24px !important;
+    font-size: 18px;
+    font-weight: 700;
+}
+
+.infoBox .mainBox .titleBOX .titleBox .avatar1,
+.infoBox .mainBox .titleBOX .titleBox .username1 {
+    width: 68px !important;
+    height: 68px !important;
+    line-height: 68px !important;
+    background: var(--old-primary) !important;
+}
+
+.infoBox .mainBox .titleBOX ::v-deep .el-statistic__head {
+    color: var(--old-muted);
+    font-size: 15px;
+}
+
+.infoBox .mainBox .titleBOX ::v-deep .el-statistic__content {
+    color: var(--old-primary-strong);
+    font-size: 24px;
+    font-weight: 800;
+}
+
+.infoBox .contentBox {
+    width: calc(100% - 28px) !important;
+    margin: 14px 0 0 !important;
+}
+
+.infoBox .contentBox ::v-deep .el-menu {
+    border: 1px solid var(--old-border);
+    border-radius: 14px;
+    overflow: hidden;
+    background: var(--old-surface);
+}
+
+.infoBox .contentBox ::v-deep .el-menu-item {
+    height: 64px;
+    line-height: 64px;
+    padding: 0 18px !important;
+    font-size: 17px;
+    font-weight: 700;
+    color: var(--old-text);
+}
+
+.infoBox .contentBox ::v-deep .el-menu-item i {
+    color: var(--old-primary);
+    font-size: 22px;
+    margin-right: 8px;
+}
+
+.infoBox .contentBox ::v-deep .el-button {
+    color: var(--old-text);
+    font-size: 17px;
+    font-weight: 700;
+}
 </style>

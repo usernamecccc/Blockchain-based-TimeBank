@@ -1,5 +1,5 @@
 <template>
-  <div class="ai-chat-panel">
+  <div class="ai-chat-panel" :class="`ai-chat-panel--${userType}`">
     <div class="chat-header">
       <div class="header-title">{{ title }}</div>
       <div class="header-subtitle">有问题可以直接问我</div>
@@ -276,6 +276,93 @@ export default {
     .el-button {
       flex-shrink: 0;
     }
+  }
+}
+
+.ai-chat-panel--old {
+  background: var(--old-bg);
+
+  .chat-header,
+  .message-list,
+  .input-bar {
+    border: 1px solid var(--old-border);
+    background: var(--old-surface);
+    box-shadow: 0 4px 16px rgba(111, 76, 43, 0.12);
+  }
+
+  .chat-header .header-title {
+    color: var(--old-primary-strong);
+    font-size: 22px;
+  }
+
+  .chat-header .header-subtitle {
+    color: var(--old-muted);
+    font-size: 15px;
+  }
+
+  .message-row .message-bubble {
+    font-size: 17px;
+    line-height: 1.65;
+    padding: 12px 14px;
+  }
+
+  .message-row.assistant .message-bubble {
+    color: var(--old-text);
+    background: #e8f4f8;
+  }
+
+  .message-row.user .message-bubble {
+    background: var(--old-primary);
+  }
+
+  .quick-actions .el-button,
+  .input-bar .el-button {
+    min-height: 44px;
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--old-primary);
+    border-color: #d29a6e;
+  }
+
+  .input-bar ::v-deep .el-textarea__inner {
+    min-height: 44px !important;
+    font-size: 16px;
+    line-height: 1.5;
+    border-color: var(--old-border);
+  }
+
+  .input-bar .el-button--primary {
+    color: #ffffff;
+    background: var(--old-primary);
+    border-color: var(--old-primary);
+  }
+}
+
+.ai-chat-panel--volunteer {
+  background: var(--vol-bg);
+
+  .chat-header,
+  .message-list,
+  .input-bar {
+    border: 1px solid var(--vol-border);
+    box-shadow: 0 4px 16px rgba(22, 119, 166, 0.10);
+  }
+
+  .chat-header .header-title {
+    color: var(--vol-primary-strong);
+  }
+
+  .message-row.assistant .message-bubble {
+    background: #e7f5f5;
+  }
+
+  .message-row.user .message-bubble {
+    background: var(--vol-primary);
+  }
+
+  .input-bar .el-button--primary {
+    background: var(--vol-primary);
+    border-color: var(--vol-primary);
   }
 }
 </style>

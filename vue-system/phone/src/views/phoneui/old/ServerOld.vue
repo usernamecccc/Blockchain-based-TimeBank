@@ -57,19 +57,61 @@ export default {
 
 <style lang='scss' scoped>
 .phone-main {
-    margin: 20px;
+    min-height: calc(100vh - 130px);
+    margin: 0;
+    padding: 16px 14px 22px;
+    background: var(--old-bg);
+
+    .blockOfImage {
+        overflow: hidden;
+        border: 1px solid var(--old-border);
+        border-radius: 14px;
+        box-shadow: 0 6px 16px rgba(111, 76, 43, 0.10);
+    }
+
+    &::v-deep .el-row {
+        margin-top: 8px;
+    }
+
     .module-card {
         display: flex;
         flex-direction: column;
         align-items: center;
         justify-content: center;
-        height: 100px;
-        border-radius: 8px;
+        min-height: 128px;
+        border-radius: 14px;
         cursor: pointer;
-        margin: 10px;
+        margin: 8px;
+        background: var(--old-surface);
+        border: 1px solid var(--old-border);
+        box-shadow: 0 5px 14px rgba(111, 76, 43, 0.10);
+
+        &::v-deep .el-card {
+            width: 100%;
+            height: 100%;
+            border: none;
+            border-radius: 14px;
+            background: transparent;
+            box-shadow: none;
+        }
+
+        &::v-deep .el-card__body {
+            min-height: 126px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 12px 8px;
+            box-sizing: border-box;
+        }
     }
     .module-card span {
-        font-size: 16px;
+        margin-top: 8px;
+        font-size: 18px;
+        font-weight: 800;
+        line-height: 1.25;
+        color: var(--old-text);
+        text-align: center;
     }
     .el-carousel__item h3 {
         color: #475669;
@@ -88,8 +130,8 @@ export default {
     }
 
     i {
-        width: 40px;
-        height: 40px;
+        width: 48px;
+        height: 48px;
         display: inline-block;
         background-size: cover;
         vertical-align: middle;

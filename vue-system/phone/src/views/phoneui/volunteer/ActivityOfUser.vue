@@ -192,6 +192,10 @@ export default {
 
 <style lang="scss" scoped>
 .addActivityBox {
+    min-height: calc(100vh - 48px);
+    padding-bottom: 78px;
+    background: var(--vol-bg);
+
     .header{
         display: flex;
         justify-content: space-between;
@@ -199,6 +203,7 @@ export default {
         border: 1px solid #DCDFE6;
         padding: 0px;
         margin: 5px;
+        background: #ffffff;
     }
     .searchBox{
         margin-top: 5px;
@@ -222,6 +227,7 @@ export default {
             height: 140px;
             align-items: center;
             margin-bottom: 15px;
+            background: #ffffff;
             .cardContent{
               display: flex;
               justify-content: space-between;
@@ -246,6 +252,7 @@ export default {
       align-items: center;
       margin-top: 10px;
       backdrop-filter: blur(10px);
+      background: rgba(255, 255, 255, 0.96);
       border-radius: 5px;
       box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
       flex-shrink: 0; /* 防止底部内容被压缩 */

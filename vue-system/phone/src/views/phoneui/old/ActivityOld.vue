@@ -288,4 +288,66 @@ export default {
         }
     }
 }
+
+.addActivityBox {
+    min-height: calc(100vh - 130px);
+    background: var(--old-bg);
+    color: var(--old-text);
+    padding-bottom: 14px;
+}
+
+.addActivityBox .header {
+    height: auto !important;
+    min-height: 56px;
+    overflow-x: auto;
+    border: 1px solid var(--old-border) !important;
+    border-radius: 14px;
+    margin: 8px 10px 12px !important;
+    background: var(--old-surface);
+}
+
+.addActivityBox .header ::v-deep .el-button {
+    min-height: 44px;
+    padding: 0 8px;
+    color: var(--old-primary);
+    font-size: 15px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.addActivityBox .mainBox ::v-deep .el-header {
+    height: auto !important;
+    min-height: 60px;
+    padding: 8px 10px;
+    gap: 8px;
+}
+
+.addActivityBox .mainBox ::v-deep .el-input__inner {
+    min-height: 46px;
+    border-color: var(--old-border);
+    border-radius: 10px;
+    font-size: 16px;
+}
+
+.addActivityBox .mainBox ::v-deep .el-button {
+    min-height: 46px;
+    font-size: 15px;
+    font-weight: 700;
+}
+
+.addActivityBox .mainBox ::v-deep .el-button--primary {
+    background: var(--old-primary);
+    border-color: var(--old-primary);
+}
+
+.addActivityBox .mainBox .activity .el-card {
+    border: 1px solid var(--old-border);
+    border-radius: 14px;
+    background: var(--old-surface);
+    box-shadow: 0 5px 16px rgba(111, 76, 43, 0.10);
+}
+
+.addActivityBox .mainBox .activity .contentBox {
+    color: var(--old-text);
+}
 </style>

@@ -342,15 +342,22 @@ export default {
   flex-direction: column;
   align-items: center;
   padding: 10px;
+  min-height: calc(100vh - 68px);
+  background: var(--vol-bg);
   .image {
     width: 95%;
     height: auto;
+    border-radius: 14px;
+    border: 1px solid var(--vol-border);
+    box-shadow: 0 5px 16px rgba(22, 119, 166, 0.10);
   }
   .content{
     margin: 10px;
     backdrop-filter: blur(10px);
-    border-radius: 10px;
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+    border: 1px solid var(--vol-border);
+    border-radius: 14px;
+    box-shadow: 0 5px 16px rgba(22, 119, 166, 0.10);
+    background: var(--vol-surface);
     height: auto;
     width: 90%;
     display: flex;
@@ -360,10 +367,21 @@ export default {
     padding: 20px;
   }
 
+  .content ::v-deep .el-button--primary {
+    background: var(--vol-primary);
+    border-color: var(--vol-primary);
+  }
+
+  .content ::v-deep .el-input__inner,
+  .content ::v-deep .el-textarea__inner {
+    border-color: var(--vol-border);
+    border-radius: 10px;
+  }
+
   .ai-prepare-inline {
     width: 100%;
     margin-top: 8px;
-    border-top: 1px solid #ebeef5;
+    border-top: 1px solid var(--vol-border);
     padding-top: 6px;
   }
 
@@ -389,7 +407,7 @@ export default {
     white-space: nowrap;
     font-size: 13px;
     font-weight: 600;
-    color: #303133;
+    color: var(--vol-primary-strong);
   }
 
   .ai-prepare-grid {
@@ -411,6 +429,7 @@ export default {
 
   .ai-prepare-section-title {
     font-weight: 600;
+    color: var(--vol-primary-strong);
     margin-bottom: 4px;
   }
 

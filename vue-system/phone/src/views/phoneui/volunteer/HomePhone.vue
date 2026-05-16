@@ -342,4 +342,58 @@ export default {
     }
   }
 }
+
+.homeBox {
+  min-height: calc(100vh - 122px);
+  background: var(--vol-bg);
+}
+
+.homeBox .mainBox {
+  padding-bottom: 12px;
+}
+
+.homeBox .activity-toolbar ::v-deep .el-input__inner {
+  border-color: var(--vol-border);
+  border-radius: 10px;
+}
+
+.homeBox .activity-toolbar .toolbar-search-btn {
+  background: var(--vol-primary);
+  border-color: var(--vol-primary);
+}
+
+.homeBox .blockOfImage {
+  margin: 10px;
+  overflow: hidden;
+  border: 1px solid var(--vol-border);
+  border-radius: 14px;
+  box-shadow: 0 5px 16px rgba(22, 119, 166, 0.10);
+}
+
+.homeBox .noticeBoard {
+  margin: 10px !important;
+  border: 1px solid var(--vol-border);
+  border-radius: 14px !important;
+  background: var(--vol-surface);
+  box-shadow: 0 5px 16px rgba(22, 119, 166, 0.10) !important;
+}
+
+.homeBox .noticeBoard .noticeBoard-title {
+  color: var(--vol-primary-strong) !important;
+}
+
+.homeBox .activities .activity .el-card {
+  border: 1px solid var(--vol-border);
+  border-radius: 14px;
+  background: var(--vol-surface);
+  box-shadow: 0 5px 16px rgba(22, 119, 166, 0.10);
+}
+
+.homeBox .activities .activity .contentBox {
+  color: #243746;
+}
+
+.homeBox ::v-deep .el-progress-bar__inner {
+  background: linear-gradient(90deg, var(--vol-accent), var(--vol-primary));
+}
 </style>

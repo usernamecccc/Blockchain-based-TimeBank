@@ -73,4 +73,42 @@
         }
     }
 }
+
+.Box {
+    min-height: 100vh;
+    padding-bottom: 74px;
+    background: var(--vol-bg);
+}
+
+.Box .el-footer {
+    height: 68px !important;
+    margin-top: 0 !important;
+    background: rgba(255, 255, 255, 0.96);
+    border-top: 1px solid var(--vol-border);
+    border-radius: 14px 14px 0 0 !important;
+    box-shadow: 0 -5px 16px rgba(22, 119, 166, 0.12) !important;
+}
+
+.Box .link-container {
+    flex: 1;
+}
+
+.Box .RouterLink {
+    min-height: 54px;
+    border-radius: 10px;
+}
+
+.Box .RouterLink .text {
+    font-size: 12px !important;
+    font-weight: 600;
+}
+
+.Box .RouterLink .icon {
+    font-size: 24px !important;
+}
+
+.Box .router-link-active {
+    color: var(--vol-primary);
+    background: #e6f4f8;
+}
 </style>

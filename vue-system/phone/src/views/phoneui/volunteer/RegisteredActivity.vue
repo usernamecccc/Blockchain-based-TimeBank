@@ -322,6 +322,8 @@ export default {
   flex-direction: column;
   align-items: center;
   padding: 10px;
+  min-height: calc(100vh - 48px);
+  background: var(--vol-bg);
   .image {
     width: 95%;
     height: auto;
@@ -329,6 +331,7 @@ export default {
   .content{
     margin: 10px;
     backdrop-filter: blur(10px);
+    background: #ffffff;
     border-radius: 10px;
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
     height: auto;
