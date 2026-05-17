@@ -50,6 +50,12 @@
             <if test="message!=null and message!=''">
                 message=#{message},
             </if>
+            <if test="serviceType!=null and serviceType!=''">
+                service_type=#{serviceType},
+            </if>
+            <if test="extraJson!=null and extraJson!=''">
+                extra_json=#{extraJson},
+            </if>
             <if test="remain!=null">
                 remain=#{remain},
             </if>

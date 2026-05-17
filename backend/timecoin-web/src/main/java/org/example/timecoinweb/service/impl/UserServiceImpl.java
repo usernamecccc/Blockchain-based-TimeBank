@@ -13,12 +13,14 @@ import org.example.timecoinweb.mapper.UserMapper;
 import org.example.timecoinweb.mapper.VolMapper;
 import org.example.timecoinweb.service.TimeCoinChainService;
 import org.example.timecoinweb.service.UserService;
+import org.example.timecoinweb.util.ServiceTypeSupport;
 import org.example.utils.DistanceUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataAccessException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.math.BigInteger;
 import java.time.LocalDate;
@@ -30,6 +32,8 @@ import java.util.Map;
 @Service
 @Slf4j
 public class UserServiceImpl implements UserService {
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+
     @Autowired
     ActivityMapper activityMapper;
     @Autowired
@@ -72,6 +76,7 @@ public class UserServiceImpl implements UserService {
         activity.setAdministratorId(administratorTableId);
 
         normalizeVolunteerRewardForPublish(activity);
+        ServiceTypeSupport.normalizeForCreate(activity, OBJECT_MAPPER);
 
         chargePublishFeeOnChain(userId);
 
@@ -138,6 +143,7 @@ public class UserServiceImpl implements UserService {
 
         //将更新时间更改了
         activity.setUpdateTime(LocalDateTime.now());
+        ServiceTypeSupport.normalizeForUpdate(activity, OBJECT_MAPPER);
 
         activityMapper.update(activity);
     }

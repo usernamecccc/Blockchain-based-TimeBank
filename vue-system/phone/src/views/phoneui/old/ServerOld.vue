@@ -29,13 +29,13 @@ export default {
     data() {
         return {
             modules: [
-                { id: 4, name: '医疗康复', icon: 'icon-doctor' },
-                { id: 5, name: '健康管理', icon: 'icon-health' },
-                { id: 6, name: '清洁整理', icon: 'icon-clear' },
-                { id: 7, name: '购物陪同', icon: 'icon-shop' },
-                { id: 8, name: '问诊陪护', icon: 'icon-chaperonage' },
-                { id: 9, name: '物品代购', icon: 'icon-shop1' },
-                { id: 10, name: '其他服务', icon: 'icon-addActivity' },
+                { id: 4, name: '医疗康复', icon: 'icon-doctor', code: 'medical_rehab' },
+                { id: 5, name: '健康管理', icon: 'icon-health', code: 'health_manage' },
+                { id: 6, name: '清洁整理', icon: 'icon-clear', code: 'cleaning' },
+                { id: 7, name: '购物陪同', icon: 'icon-shop', code: 'shopping_companion' },
+                { id: 8, name: '问诊陪护', icon: 'icon-chaperonage', code: 'clinic_companion' },
+                { id: 9, name: '物品代购', icon: 'icon-shop1', code: 'purchase' },
+                { id: 10, name: '其他服务', icon: 'icon-addActivity', code: 'other_service' },
             ],
             // 照片
             images: [
@@ -49,7 +49,13 @@ export default {
             // 在这里执行导航操作，比如使用路由导航到模块页面
             console.log('点击了模块卡片', module);
             // 示例：使用 Vue Router 导航到模块详情页面
-            this.$router.push(`/getInfoActivity`);
+            this.$router.push({
+                path: '/getInfoActivity',
+                query: {
+                    serviceType: module.code || 'other_service',
+                    serviceLabel: module.name || '其他服务',
+                }
+            });
         },
     }
 };
