@@ -33,8 +33,8 @@ public interface ActivityMapper {
     /**
      * 让活动剩余名额值减少1
      */
-    @Update("update activity set remain=remain-1 where id=#{activityId}")
-    void lessRemain(@Param("activityId") Integer activityId);
+    @Update("update activity set remain=remain-1 where id=#{activityId} and remain > 0")
+    int lessRemain(@Param("activityId") Integer activityId);
 
     /**
      * 管理员新增加部门

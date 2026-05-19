@@ -15,6 +15,7 @@
             </el-statistic>
         </div>
         <el-button round style="width: 80%;" v-if="showClosedBanner">报名结束</el-button>
+        <el-button round style="width: 80%;" disabled v-if="showFullBanner">名额已满</el-button>
         <el-button type="primary" round style="width: 80%;" @click="signUp" v-if="showJoinButton">点击报名</el-button>
         <el-button type="warning" round plain style="width: 80%;" @click="cancelEnrollment" v-if="showCancelButton">取消报名</el-button>
         <div v-if="alreadyEnrolled && enrollmentChecked" style="margin-top:10px;font-size:13px;color:#67c23a;">您已报名该活动</div>
@@ -236,13 +237,21 @@ export default {
             return deadlineDate > new Date();
         },
         showJoinButton() {
-            return this.enrollmentChecked && this.deadlineOpen && !this.alreadyEnrolled;
+            return this.enrollmentChecked && this.deadlineOpen && !this.alreadyEnrolled && !this.isFull;
         },
         showCancelButton() {
             return this.enrollmentChecked && this.deadlineOpen && this.alreadyEnrolled;
         },
+        isFull() {
+            if (!this.enrollmentChecked || this.alreadyEnrolled) return false;
+            const remain = Number(this.form.remain);
+            return Number.isFinite(remain) && remain <= 0;
+        },
+        showFullBanner() {
+            return this.isFull;
+        },
         showClosedBanner() {
-            return this.enrollmentChecked && !this.deadlineOpen;
+            return this.enrollmentChecked && !this.deadlineOpen && !this.isFull;
         }
     },
     methods: {

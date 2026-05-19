@@ -154,7 +154,9 @@ export default {
                 if (this.activeTab === 'available') {
                     // 解析失败时按“可报名”保留，避免整页被误过滤为空
                     if (!deadline) return true;
-                    return deadline > now;
+                    const remain = Number(row.remain);
+                    const hasQuota = Number.isFinite(remain) ? remain > 0 : true;
+                    return deadline > now && hasQuota;
                 }
                 if (this.activeTab === 'joined') {
                     if (!activityEnd) return true;
