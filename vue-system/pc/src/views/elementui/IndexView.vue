@@ -16,7 +16,12 @@
                     </div>
                 </span>
             </div>
-            <div style="color: white">{{ roleLabel }}：{{ userInfo.username }}</div>
+            <div style="color: white">
+              {{ roleLabel }}：{{ userInfo.username }}
+              <span v-if="userInfo.id != null && userInfo.id !== ''" style="opacity: 0.92; margin-left: 6px;">
+                （ID {{ userInfo.id }}）
+              </span>
+            </div>
             <i class="el-icon-arrow-down el-icon--right"></i>
           </span>
           <el-dropdown-menu slot="dropdown">

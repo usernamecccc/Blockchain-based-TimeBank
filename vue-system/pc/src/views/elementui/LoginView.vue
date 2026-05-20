@@ -31,22 +31,11 @@
             </div>
             <div style="margin: 12px 0; color: #666;">账号类型：管理员</div>
             <el-button @click="signUp">注册</el-button>
-            <div class="loginIcon">
-              <div class="login-icon wechat"/>
-              <div class="login-icon QQ"/>
-              <div class="login-icon alipay"/>
-            </div>
           </form>
         </div>
         <div class="form-container sign-in-container">
           <form @submit.prevent>
             <h1>登录</h1>
-            <div style="margin-top: 20px;margin-bottom: 20px;">登陆方式</div>
-            <div class="loginIcon">
-              <div class="login-icon wechat"/>
-              <div class="login-icon QQ"/>
-              <div class="login-icon alipay"/>
-            </div>
             <div class="txtb">
               <input v-model="signInUsername" type="text" placeholder="Username">
             </div>
@@ -209,27 +198,6 @@ body {
     align-items: center;
     height: 100vh;
     margin: -20px 0 50px;
-}
-.loginIcon {
-    display: flex;
-    justify-content: center;
-}
-.login-icon {
-  width: 50px;
-  height: 50px;
-  border-radius: 20px;
-  background: #f5f6f8;
-  background-size: cover;
-  margin: 10px;
-  &.wechat {
-    background-image: url('~@/assets/myResource/wechat.png');
-  }
-  &.QQ {
-    background-image: url('~@/assets/myResource/QQ.png');
-  }
-  &.alipay {
-    background-image: url('~@/assets/myResource/alipay.png');
-  }
 }
 h1 {
     font-weight: bold;

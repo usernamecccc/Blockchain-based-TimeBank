@@ -32,7 +32,12 @@
                             <div class="cardContent">
                                 <img :src="$activityImagePath" class="image">
                                 <div class="contentBox">
-                                    <div style="font-size: 17px;">{{ row.title }}</div>
+                                    <div style="font-size: 17px;">
+                                        {{ row.title }}
+                                        <el-tag size="mini" type="info" style="margin-left: 6px;">
+                                            {{ formatServiceTypeLabel(row.serviceType) }}
+                                        </el-tag>
+                                    </div>
                                     <div style="font-size: 14px;">剩余名额：{{ row.remain }}</div>
                                     <el-progress
                                         :percentage="Number(((parseFloat(row.quota) - parseFloat(row.remain)) / parseFloat(row.quota) * 100).toFixed(1))"></el-progress>
@@ -87,6 +92,19 @@ export default {
         this.search();
     },
     methods: {
+        formatServiceTypeLabel(serviceType) {
+            const map = {
+                medical_rehab: '医疗康复',
+                health_manage: '健康管理',
+                cleaning: '清洁整理',
+                shopping_companion: '购物陪同',
+                clinic_companion: '问诊陪护',
+                purchase: '物品代购',
+                other_service: '其他服务',
+            };
+            if (!serviceType) return map.other_service;
+            return map[serviceType] || map.other_service;
+        },
         fetchPublishFee() {
             request.get('/info/publishActivityFee')
                 .then(res => {

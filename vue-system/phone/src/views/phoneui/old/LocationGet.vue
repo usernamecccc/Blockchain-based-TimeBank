@@ -95,6 +95,12 @@ export default {
     },
     async submitActivities(formData) {
       const payload = { ...formData };
+      if (!payload.serviceType) {
+        payload.serviceType = 'other_service';
+      }
+      if (!payload.extraJson) {
+        payload.extraJson = '{}';
+      }
       const dates = Array.isArray(payload.dates) ? payload.dates : [];
       if (!payload.date && dates.length > 0) {
         payload.date = dates[0];

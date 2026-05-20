@@ -38,6 +38,9 @@
             </div>
         </div>
         <el-form ref="form" :model="form" label-width="0" :rules="rules">
+            <el-form-item>
+                <div class="field-hint">服务类型：{{ currentServiceTypeLabel }}</div>
+            </el-form-item>
             <el-form-item prop="title">
                 <el-input v-model="form.title" placeholder="活动标题"></el-input>
             </el-form-item>
@@ -115,6 +118,29 @@
             <el-form-item prop="description">
                 <el-input type="textarea" v-model="form.description" placeholder="活动描述"></el-input>
             </el-form-item>
+            <el-form-item v-for="field in dynamicExtraFields" :key="field.key">
+                <div class="field-hint">{{ field.label }}<span v-if="field.required">（必填）</span></div>
+                <el-input
+                    v-if="field.type === 'textarea'"
+                    type="textarea"
+                    :placeholder="field.placeholder"
+                    v-model.trim="form.extra[field.key]"
+                ></el-input>
+                <el-select
+                    v-else-if="field.type === 'boolean'"
+                    v-model="form.extra[field.key]"
+                    placeholder="请选择"
+                    class="w-full-select"
+                >
+                    <el-option label="是" :value="true"></el-option>
+                    <el-option label="否" :value="false"></el-option>
+                </el-select>
+                <el-input
+                    v-else
+                    :placeholder="field.placeholder"
+                    v-model.trim="form.extra[field.key]"
+                ></el-input>
+            </el-form-item>
             <el-form-item class="form-btn-row">
                 <el-button @click="handleCancel">取 消</el-button>
                 <el-button type="primary" @click="onSubmitForm">确 定</el-button>
@@ -129,9 +155,51 @@ import request from '@/utils/request';
 
 /** 只能选择 15 分钟档：下拉分钟取值（仅四种） */
 const QUARTER_MINUTES = Object.freeze([0, 15, 30, 45]);
+const SERVICE_TYPE_LABELS = Object.freeze({
+    medical_rehab: '医疗康复',
+    health_manage: '健康管理',
+    cleaning: '清洁整理',
+    shopping_companion: '购物陪同',
+    clinic_companion: '问诊陪护',
+    purchase: '物品代购',
+    other_service: '其他服务',
+});
+const SERVICE_TYPE_FIELD_CONFIG = Object.freeze({
+    medical_rehab: [
+        { key: 'hospitalAddress', label: '医院地址', placeholder: '请输入医院详细地址', required: true },
+        { key: 'department', label: '科室', placeholder: '如：内科/康复科', required: true },
+        { key: 'appointmentTime', label: '预约时间', placeholder: '如：2026-05-20 09:00', required: true },
+    ],
+    health_manage: [
+        { key: 'healthTaskType', label: '健康任务类型', placeholder: '如：服药提醒/血压测量', required: true },
+        { key: 'frequency', label: '服务频次', placeholder: '如：每周 3 次', required: true },
+    ],
+    cleaning: [
+        { key: 'cleaningScope', label: '清洁范围', placeholder: '如：厨房+卫生间', required: true },
+        { key: 'homeArea', label: '房屋面积', placeholder: '如：80 平米', required: true },
+    ],
+    shopping_companion: [
+        { key: 'destination', label: '目的地', placeholder: '如：XX 商超', required: true },
+        { key: 'budgetRange', label: '预算范围', placeholder: '如：100-300 元', required: true },
+    ],
+    clinic_companion: [
+        { key: 'hospitalAddress', label: '医院地址', placeholder: '请输入医院详细地址', required: true },
+        { key: 'visitType', label: '就诊类型', placeholder: '如：复诊/检查', required: true },
+        { key: 'registrationNeeded', label: '是否需要协助挂号', type: 'boolean', required: true },
+    ],
+    purchase: [
+        { key: 'shoppingList', label: '代购清单', type: 'textarea', placeholder: '请填写物品名、规格、数量', required: true },
+        { key: 'maxBudget', label: '最高预算', placeholder: '如：200 元', required: true },
+    ],
+    other_service: [
+        { key: 'customCategory', label: '自定义服务类别', placeholder: '如：上门陪聊', required: true },
+        { key: 'serviceDetails', label: '服务详情', type: 'textarea', placeholder: '请详细说明需求', required: true },
+    ],
+});
 
 function emptyFormModel() {
     return {
+        serviceType: 'other_service',
         title: '',
         quota: 1,
         deadlineDay: null,
@@ -144,6 +212,7 @@ function emptyFormModel() {
         endMinute: null,
         description: '',
         volunteerReward: 0,
+        extra: {},
     };
 }
 
@@ -308,7 +377,17 @@ export default {
             }
         };
     },
+    created() {
+        this.initServiceTypeFromRoute();
+        this.ensureDynamicExtraShape();
+    },
     computed: {
+        currentServiceTypeLabel() {
+            return SERVICE_TYPE_LABELS[this.form.serviceType] || SERVICE_TYPE_LABELS.other_service;
+        },
+        dynamicExtraFields() {
+            return SERVICE_TYPE_FIELD_CONFIG[this.form.serviceType] || SERVICE_TYPE_FIELD_CONFIG.other_service;
+        },
         compactDraftTips() {
             if (!this.aiDraft) return [];
             const suggestions = Array.isArray(this.aiDraft.suggestions) ? this.aiDraft.suggestions.slice(0, 2) : [];
@@ -346,6 +425,56 @@ export default {
             .catch(() => {});
     },
     methods: {
+        initServiceTypeFromRoute() {
+            const routeType = this.$route && this.$route.query ? this.$route.query.serviceType : '';
+            this.form.serviceType = SERVICE_TYPE_LABELS[routeType] ? routeType : 'other_service';
+        },
+        ensureDynamicExtraShape() {
+            if (!this.form.extra || typeof this.form.extra !== 'object') {
+                this.$set(this.form, 'extra', {});
+            }
+            this.dynamicExtraFields.forEach((field) => {
+                if (Object.prototype.hasOwnProperty.call(this.form.extra, field.key)) {
+                    return;
+                }
+                this.$set(this.form.extra, field.key, field.type === 'boolean' ? null : '');
+            });
+        },
+        validateDynamicExtraFields() {
+            this.ensureDynamicExtraShape();
+            for (const field of this.dynamicExtraFields) {
+                if (!field.required) continue;
+                const val = this.form.extra[field.key];
+                if (field.type === 'boolean') {
+                    if (val === null || val === undefined) {
+                        this.$message.error(`请填写：${field.label}`);
+                        return false;
+                    }
+                    continue;
+                }
+                if (val === null || val === undefined || String(val).trim() === '') {
+                    this.$message.error(`请填写：${field.label}`);
+                    return false;
+                }
+            }
+            return true;
+        },
+        buildExtraPayload() {
+            const payload = {};
+            this.dynamicExtraFields.forEach((field) => {
+                const val = this.form.extra[field.key];
+                if (field.type === 'boolean') {
+                    if (val !== null && val !== undefined) {
+                        payload[field.key] = val;
+                    }
+                    return;
+                }
+                if (val !== null && val !== undefined && String(val).trim() !== '') {
+                    payload[field.key] = val;
+                }
+            });
+            return payload;
+        },
         formatHourLabel(h) {
             return `${String(h).padStart(2, '0')} 点`;
         },
@@ -448,6 +577,9 @@ export default {
         onSubmitForm() {
             this.$refs.form.validate((valid) => {
                 if (valid) {
+                    if (!this.validateDynamicExtraFields()) {
+                        return;
+                    }
                     const deadlineDt = this.composeDeadlineDatetime();
                     const dayBasis = this.composeActivityBeginEndDate();
                     if (!deadlineDt || !dayBasis) {
@@ -485,6 +617,8 @@ export default {
                     data.dates = normalizedDates;
                     data.date = normalizedDates[0] || '';
                     data.message = JSON.stringify({ dates: normalizedDates });
+                    data.serviceType = this.form.serviceType || 'other_service';
+                    data.extraJson = JSON.stringify(this.buildExtraPayload());
                     data.deadline = format(deadlineDt, "yyyy-MM-dd'T'HH:mm:ss", { timeZone: 'Asia/BeiJing' });
                     data.phone = '15245678901';
 
@@ -540,7 +674,10 @@ export default {
             this.$router.push('/serverOld');
         },
         resetForm() {
+            const serviceType = this.form.serviceType || 'other_service';
             this.form = emptyFormModel();
+            this.form.serviceType = SERVICE_TYPE_LABELS[serviceType] ? serviceType : 'other_service';
+            this.ensureDynamicExtraShape();
             this.$nextTick(() => {
                 if (this.$refs.form) {
                     this.$refs.form.resetFields();

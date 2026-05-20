@@ -35,11 +35,6 @@
         <el-form-item>
           <el-button type="primary" @click="signUp" class="register-btn">注册</el-button>
         </el-form-item>
-        <div class="loginIcon">
-          <div class="login-icon wechat"/>
-          <div class="login-icon QQ"/>
-          <div class="login-icon alipay"/>
-        </div>
       </el-form>
     </el-main>
   </el-container>
@@ -80,28 +75,6 @@ h1 {
 
 .register-btn {
   width: 100%;
-}
-
-.loginIcon {
-  display: flex;
-  justify-content: center;
-}
-.login-icon {
-  width: 50px;
-  height: 50px;
-  border-radius: 20px;
-  background: #f5f6f8;
-  background-size: cover;
-  margin: 10px;
-  &.wechat {
-    background-image: url('~@/assets/common/wechat.png');
-  }
-  &.QQ {
-    background-image: url('~@/assets/common/QQ.png');
-  }
-  &.alipay {
-    background-image: url('~@/assets/common/alipay.png');
-  }
 }
 </style>
 

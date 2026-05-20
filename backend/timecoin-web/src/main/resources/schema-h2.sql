@@ -55,11 +55,17 @@ CREATE TABLE IF NOT EXISTS activity (
   create_time TIMESTAMP DEFAULT NULL,
   update_time TIMESTAMP DEFAULT NULL,
   message VARCHAR(512) DEFAULT NULL,
+  service_type VARCHAR(64) NOT NULL DEFAULT 'other_service',
+  extra_json CLOB DEFAULT NULL,
   remain SMALLINT NOT NULL DEFAULT 0,
   volunteer_reward INT NOT NULL DEFAULT 0,
   CONSTRAINT fk_act_old FOREIGN KEY (old_id) REFERENCES old(id),
   CONSTRAINT fk_act_admi FOREIGN KEY (administrator_id) REFERENCES administrator(id)
 );
+
+-- 历史库迁移：activity 旧表补列
+ALTER TABLE activity ADD COLUMN IF NOT EXISTS service_type VARCHAR(64) DEFAULT 'other_service';
+ALTER TABLE activity ADD COLUMN IF NOT EXISTS extra_json CLOB;
 
 CREATE TABLE IF NOT EXISTS notice (
   id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,

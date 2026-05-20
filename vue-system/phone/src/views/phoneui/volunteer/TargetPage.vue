@@ -5,6 +5,12 @@
         <div>
             {{ form.title }}
         </div>
+        <div class="reward-banner" :class="{ 'reward-banner--zero': volunteerRewardNumber <= 0 }">
+          <div class="reward-banner-main">
+            <i class="el-icon-coin"></i>
+            每人答谢 <strong>{{ volunteerRewardNumber }}</strong> 时间币
+          </div>
+        </div>
         <el-divider content-position="center">报名截止</el-divider>
         <div style="width: 100%; display: inline-block; margin-bottom: 10px;" v-if="deadline">
             <el-statistic
@@ -15,6 +21,7 @@
             </el-statistic>
         </div>
         <el-button round style="width: 80%;" v-if="showClosedBanner">报名结束</el-button>
+        <el-button round style="width: 80%;" disabled v-if="showFullBanner">名额已满</el-button>
         <el-button type="primary" round style="width: 80%;" @click="signUp" v-if="showJoinButton">点击报名</el-button>
         <el-button type="warning" round plain style="width: 80%;" @click="cancelEnrollment" v-if="showCancelButton">取消报名</el-button>
         <div v-if="alreadyEnrolled && enrollmentChecked" style="margin-top:10px;font-size:13px;color:#67c23a;">您已报名该活动</div>
@@ -56,6 +63,9 @@
             <el-form-item label="剩余名额">
                 <el-input v-model="form.remain" readonly prefix-icon="el-icon-sell"></el-input>
             </el-form-item>
+            <el-form-item label="每人答谢">
+                <el-input :value="volunteerRewardShortLabel" readonly prefix-icon="el-icon-coin"></el-input>
+            </el-form-item>
             <el-form-item label="报名截止时间">
                 <div class="block">
                     <el-date-picker
@@ -86,6 +96,12 @@
             </el-form-item>
             <el-form-item label="活动描述">
                 <el-input type="textarea" v-model="form.description" readonly></el-input>
+            </el-form-item>
+            <el-form-item label="服务类型">
+                <el-input :value="formatServiceTypeLabel(form.serviceType)" readonly prefix-icon="el-icon-collection-tag"></el-input>
+            </el-form-item>
+            <el-form-item v-for="item in parsedExtraItems" :key="item.key" :label="item.label">
+                <el-input :value="item.value" readonly></el-input>
             </el-form-item>
             <el-form-item label="活动状态">
                 <el-input v-model="statusLabel" readonly prefix-icon="el-icon-info"></el-input>
@@ -191,6 +207,37 @@ export default {
             const selectedOption = this.options.find(option => option.value === this.form.status);
             return selectedOption ? selectedOption.label : '未知状态';
         },
+        parsedExtraItems() {
+            const extra = this.parseExtraJson(this.form.extraJson);
+            const labels = {
+                hospitalAddress: '医院地址',
+                department: '科室',
+                appointmentTime: '预约时间',
+                healthTaskType: '健康任务类型',
+                frequency: '服务频次',
+                cleaningScope: '清洁范围',
+                homeArea: '房屋面积',
+                destination: '目的地',
+                budgetRange: '预算范围',
+                visitType: '就诊类型',
+                registrationNeeded: '是否需要协助挂号',
+                shoppingList: '代购清单',
+                maxBudget: '最高预算',
+                customCategory: '自定义服务类别',
+                serviceDetails: '服务详情',
+            };
+            return Object.keys(extra).map((key) => {
+                let value = extra[key];
+                if (typeof value === 'boolean') {
+                    value = value ? '是' : '否';
+                }
+                return {
+                    key,
+                    label: labels[key] || key,
+                    value: value == null || value === '' ? '-' : String(value),
+                };
+            });
+        },
         /** 报名尚未截止 */
         deadlineOpen() {
             if (!this.form.deadline) return false;
@@ -199,16 +246,56 @@ export default {
             return deadlineDate > new Date();
         },
         showJoinButton() {
-            return this.enrollmentChecked && this.deadlineOpen && !this.alreadyEnrolled;
+            return this.enrollmentChecked && this.deadlineOpen && !this.alreadyEnrolled && !this.isFull;
         },
         showCancelButton() {
             return this.enrollmentChecked && this.deadlineOpen && this.alreadyEnrolled;
         },
+        isFull() {
+            if (!this.enrollmentChecked || this.alreadyEnrolled) return false;
+            const remain = Number(this.form.remain);
+            return Number.isFinite(remain) && remain <= 0;
+        },
+        showFullBanner() {
+            return this.isFull;
+        },
         showClosedBanner() {
-            return this.enrollmentChecked && !this.deadlineOpen;
-        }
+            return this.enrollmentChecked && !this.deadlineOpen && !this.isFull;
+        },
+        volunteerRewardNumber() {
+            const v = this.form.volunteerReward;
+            const n = v === null || v === undefined || v === '' ? 0 : Number(v);
+            return Number.isFinite(n) ? n : 0;
+        },
+        volunteerRewardShortLabel() {
+            return `${this.volunteerRewardNumber} 时间币`;
+        },
     },
     methods: {
+        formatServiceTypeLabel(serviceType) {
+            const map = {
+                medical_rehab: '医疗康复',
+                health_manage: '健康管理',
+                cleaning: '清洁整理',
+                shopping_companion: '购物陪同',
+                clinic_companion: '问诊陪护',
+                purchase: '物品代购',
+                other_service: '其他服务',
+            };
+            return map[serviceType] || map.other_service;
+        },
+        parseExtraJson(extraJson) {
+            if (!extraJson) return {};
+            try {
+                const parsed = typeof extraJson === 'string' ? JSON.parse(extraJson) : extraJson;
+                if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+                    return parsed;
+                }
+            } catch (error) {
+                // Ignore malformed legacy extraJson
+            }
+            return {};
+        },
         formatActivityDates(activity) {
             const message = activity && activity.message ? String(activity.message) : '';
             if (message) {
@@ -431,6 +518,41 @@ export default {
     font-weight: 600;
     color: var(--vol-primary-strong);
     margin-bottom: 4px;
+  }
+
+  .reward-banner {
+    width: 100%;
+    margin-top: 10px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    border: 1px solid rgba(103, 194, 58, 0.35);
+    background: rgba(103, 194, 58, 0.08);
+    text-align: left;
+    box-sizing: border-box;
+  }
+
+  .reward-banner--zero {
+    border-color: var(--vol-border);
+    background: rgba(144, 147, 153, 0.08);
+  }
+
+  .reward-banner-main {
+    font-size: 15px;
+    color: var(--vol-primary-strong);
+    line-height: 1.4;
+  }
+
+  .reward-banner-main i {
+    margin-right: 4px;
+    color: #67c23a;
+  }
+
+  .reward-banner--zero .reward-banner-main {
+    color: #606266;
+  }
+
+  .reward-banner--zero .reward-banner-main i {
+    color: #909399;
   }
 
 }

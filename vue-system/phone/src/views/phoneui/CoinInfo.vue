@@ -4,9 +4,9 @@
       <el-avatar class="avatar" size="large" :src="avatarSrc">用户</el-avatar>
       <div class="details">
         <p>用户名：{{ userInfo.username || '—' }}</p>
+        <p class="user-id-line">用户 ID：{{ userInfo.id != null && userInfo.id !== '' ? userInfo.id : '—' }}</p>
         <p>时间币余额（链上）：<strong class="coin-balance">{{ coinBalanceDisplay }}</strong></p>
         <p v-if="!coinChainReady && chainReason" class="hint">{{ chainReason }}</p>
-        <p>信誉分数：暂无记录</p>
       </div>
     </div>
 
@@ -224,6 +224,11 @@ export default {
 
 .details p {
   margin: 6px 0;
+}
+
+.user-id-line {
+  font-size: 13px;
+  color: #909399;
 }
 
 .coin-balance {

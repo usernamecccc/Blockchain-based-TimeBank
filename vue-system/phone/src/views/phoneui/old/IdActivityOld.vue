@@ -56,6 +56,12 @@
                 <el-form-item label="活动描述">
                     <el-input type="textarea" v-model="form.description"></el-input>
                 </el-form-item>
+                <el-form-item label="服务类型">
+                    <el-input :value="formatServiceTypeLabel(form.serviceType)" readonly prefix-icon="el-icon-collection-tag"></el-input>
+                </el-form-item>
+                <el-form-item v-for="item in parsedExtraItems" :key="item.key" :label="item.label">
+                    <el-input :value="item.value" readonly></el-input>
+                </el-form-item>
                 <el-form-item label="每人答谢">
                     <el-input :value="String(form.volunteerReward ?? 0)" readonly prefix-icon="el-icon-money">
                         <template slot="append">时间币/人（链上）</template>
@@ -126,21 +132,19 @@
                                 </div>
                                 <div style="display: flex;justify-content: center;align-items: center; margin-top: 8px;">
                                     <el-button v-if="!isEndSign" round size="mini" disabled
-                                        style="margin-top: 5px;width: 45%;">服务未开始</el-button>
+                                        style="margin-top: 5px;width: 90%;">服务未开始</el-button>
                                     <el-button v-else-if="isEndSign && isVolunteerIncomplete(row)" type="success" round
                                         size="mini" @click="editUser(row.id)" :loading="loadingIds.has(row.id)" :disabled="loadingIds.has(row.id)"
-                                        style="margin-top: 5px;width: 45%;">
+                                        style="margin-top: 5px;width: 90%;">
                                         <i class="el-icon-check" style="margin-right: 4px;"></i>
                                         {{ loadingIds.has(row.id) ? '处理中...' : '标记完成' }}
                                     </el-button>
                                     <el-button v-else round size="mini" type="danger" plain
-                                        style="margin-top: 5px;width: 45%;" :loading="loadingIds.has(row.id)" :disabled="loadingIds.has(row.id)"
+                                        style="margin-top: 5px;width: 90%;" :loading="loadingIds.has(row.id)" :disabled="loadingIds.has(row.id)"
                                         @click="editUser1(row.id)">
                                         <i class="el-icon-refresh-left" style="margin-right: 4px;"></i>
                                         {{ loadingIds.has(row.id) ? '处理中...' : '撤回完成' }}
                                     </el-button>
-                                    <el-button round size="mini" type="primary" plain
-                                        style="margin-top: 5px;width: 45%;">联系志愿者</el-button>
                                 </div>
                             </div>
                         </div>
@@ -222,9 +226,63 @@ export default {
             const selectedOption = this.options.find(option => option.value === this.form.status);
             return selectedOption ? selectedOption.label : '未知状态';
         },
-
+        parsedExtraItems() {
+            const extra = this.parseExtraJson(this.form.extraJson);
+            const labels = {
+                hospitalAddress: '医院地址',
+                department: '科室',
+                appointmentTime: '预约时间',
+                healthTaskType: '健康任务类型',
+                frequency: '服务频次',
+                cleaningScope: '清洁范围',
+                homeArea: '房屋面积',
+                destination: '目的地',
+                budgetRange: '预算范围',
+                visitType: '就诊类型',
+                registrationNeeded: '是否需要协助挂号',
+                shoppingList: '代购清单',
+                maxBudget: '最高预算',
+                customCategory: '自定义服务类别',
+                serviceDetails: '服务详情',
+            };
+            return Object.keys(extra).map((key) => {
+                let value = extra[key];
+                if (typeof value === 'boolean') {
+                    value = value ? '是' : '否';
+                }
+                return {
+                    key,
+                    label: labels[key] || key,
+                    value: value == null || value === '' ? '-' : String(value),
+                };
+            });
+        },
     },
     methods: {
+        formatServiceTypeLabel(serviceType) {
+            const map = {
+                medical_rehab: '医疗康复',
+                health_manage: '健康管理',
+                cleaning: '清洁整理',
+                shopping_companion: '购物陪同',
+                clinic_companion: '问诊陪护',
+                purchase: '物品代购',
+                other_service: '其他服务',
+            };
+            return map[serviceType] || map.other_service;
+        },
+        parseExtraJson(extraJson) {
+            if (!extraJson) return {};
+            try {
+                const parsed = typeof extraJson === 'string' ? JSON.parse(extraJson) : extraJson;
+                if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+                    return parsed;
+                }
+            } catch (error) {
+                // Ignore malformed legacy extraJson
+            }
+            return {};
+        },
         formatActivityDates(activity) {
             const message = activity && activity.message ? String(activity.message) : '';
             if (message) {

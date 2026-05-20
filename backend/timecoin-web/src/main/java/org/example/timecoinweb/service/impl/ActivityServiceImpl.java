@@ -2,6 +2,7 @@ package org.example.timecoinweb.service.impl;
 
 import com.github.pagehelper.Page;
 import com.github.pagehelper.PageHelper;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.example.pojo.Activity;
 import org.example.pojo.PageBean;
 import org.example.timecoinweb.config.BlockchainProperties;
@@ -10,6 +11,7 @@ import org.example.timecoinweb.mapper.AdmiMapper;
 import org.example.timecoinweb.mapper.OldMapper;
 import org.example.timecoinweb.mapper.VolMapper;
 import org.example.timecoinweb.service.ActivityService;
+import org.example.timecoinweb.util.ServiceTypeSupport;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,6 +25,7 @@ import java.util.Map;
 
 @Service
 public class ActivityServiceImpl implements ActivityService {
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     private static Object mapGetIgnoreCase(Map<String, Object> row, String... keyCandidates) {
         for (String want : keyCandidates) {
@@ -120,6 +123,7 @@ public class ActivityServiceImpl implements ActivityService {
         activity.setAdministratorId(administrator);
 
         activity.setUpdateTime(LocalDateTime.now());
+        ServiceTypeSupport.normalizeForUpdate(activity, OBJECT_MAPPER);
 
         resolveOldIdForActivity(activity);
         normalizeVolunteerRewardForAdmin(activity, false);
@@ -138,6 +142,12 @@ public class ActivityServiceImpl implements ActivityService {
         activity.setRemain(activity.getQuota());
         // 管理员代为发布：直接审核通过（2），不再走待审核）
         activity.setStatus((short) 2);
+        if (activity.getServiceType() == null || activity.getServiceType().trim().isEmpty()) {
+            activity.setServiceType(ServiceTypeSupport.OTHER_SERVICE);
+        }
+        if (activity.getExtraJson() == null || activity.getExtraJson().trim().isEmpty()) {
+            activity.setExtraJson("{}");
+        }
 
         resolveOldIdForActivity(activity);
         normalizeVolunteerRewardForAdmin(activity, true);

@@ -33,15 +33,15 @@ public interface ActivityMapper {
     /**
      * 让活动剩余名额值减少1
      */
-    @Update("update activity set remain=remain-1 where id=#{activityId}")
-    void lessRemain(@Param("activityId") Integer activityId);
+    @Update("update activity set remain=remain-1 where id=#{activityId} and remain > 0")
+    int lessRemain(@Param("activityId") Integer activityId);
 
     /**
      * 管理员新增加部门
      * @param activity
      */
-    @Insert("insert into activity(title, quota, deadline, date, begin, end, address, old_id, phone, description, administrator_id, create_time, update_time, message, remain, volunteer_reward, status) " +
-            "values (#{title},#{quota},#{deadline},#{date},#{begin},#{end},#{address},#{oldId},#{phone},#{description},#{administratorId},#{createTime},#{updateTime},#{message},#{remain},#{volunteerReward},#{status})")
+    @Insert("insert into activity(title, quota, deadline, date, begin, end, address, old_id, phone, description, administrator_id, create_time, update_time, message, service_type, extra_json, remain, volunteer_reward, status) " +
+            "values (#{title},#{quota},#{deadline},#{date},#{begin},#{end},#{address},#{oldId},#{phone},#{description},#{administratorId},#{createTime},#{updateTime},#{message},#{serviceType},#{extraJson},#{remain},#{volunteerReward},#{status})")
     void insert(Activity activity);
 
     /**

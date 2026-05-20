@@ -13,12 +13,16 @@ import org.example.timecoinweb.mapper.UserMapper;
 import org.example.timecoinweb.mapper.VolMapper;
 import org.example.timecoinweb.service.TimeCoinChainService;
 import org.example.timecoinweb.service.UserService;
+import org.example.timecoinweb.util.ServiceTypeSupport;
 import org.example.utils.DistanceUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataAccessException;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.interceptor.TransactionAspectSupport;
 import org.springframework.util.StringUtils;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.math.BigInteger;
 import java.time.LocalDate;
@@ -30,6 +34,8 @@ import java.util.Map;
 @Service
 @Slf4j
 public class UserServiceImpl implements UserService {
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+
     @Autowired
     ActivityMapper activityMapper;
     @Autowired
@@ -72,6 +78,7 @@ public class UserServiceImpl implements UserService {
         activity.setAdministratorId(administratorTableId);
 
         normalizeVolunteerRewardForPublish(activity);
+        ServiceTypeSupport.normalizeForCreate(activity, OBJECT_MAPPER);
 
         chargePublishFeeOnChain(userId);
 
@@ -138,6 +145,7 @@ public class UserServiceImpl implements UserService {
 
         //将更新时间更改了
         activity.setUpdateTime(LocalDateTime.now());
+        ServiceTypeSupport.normalizeForUpdate(activity, OBJECT_MAPPER);
 
         activityMapper.update(activity);
     }
@@ -184,22 +192,38 @@ public class UserServiceImpl implements UserService {
      * @param activityId
      * @param userId
      */
+    @Transactional
     @Override
     public String volAcceptActivity(Integer activityId, Integer userId) {
-        Activity activity;
-
         //1.找到该志愿者的志愿者id
         Integer volId=volMapper.selectVolId(userId);
+        if (volId == null) {
+            return "志愿者信息不存在，请重新登录";
+        }
 
-        //2.将remain减少1并存入到数据库中
-        try {
-            activityMapper.lessRemain(activityId);
-        }catch (DataAccessException e){
+        //2.已报名直接返回，避免重复扣减
+        VolActivity existed = volMapper.volSelectByActVolId(activityId, volId);
+        if (existed != null) {
+            return "您已报名该活动";
+        }
+
+        //3.仅在剩余名额>0时扣减
+        int affected = activityMapper.lessRemain(activityId);
+        if (affected <= 0) {
             return "剩余名额不够";
         }
 
-        //3.维护志愿者、活动中间表
-        volMapper.insertVolAct(volId, activityId);
+        //4.维护志愿者、活动中间表
+        try {
+            volMapper.insertVolAct(volId, activityId);
+        } catch (DuplicateKeyException e) {
+            // 避免扣减成功但重复报名失败导致 remain 不一致
+            TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();
+            return "您已报名该活动";
+        } catch (DataAccessException e) {
+            TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();
+            throw e;
+        }
 
         return "1";
     }

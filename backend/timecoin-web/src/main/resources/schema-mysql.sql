@@ -53,11 +53,48 @@ CREATE TABLE IF NOT EXISTS activity (
   create_time DATETIME DEFAULT NULL,
   update_time DATETIME DEFAULT NULL,
   message VARCHAR(512) DEFAULT NULL,
+  service_type VARCHAR(64) NOT NULL DEFAULT 'other_service',
+  extra_json JSON NULL,
   remain SMALLINT NOT NULL DEFAULT 0,
   volunteer_reward INT NOT NULL DEFAULT 0,
   CONSTRAINT fk_act_old FOREIGN KEY (old_id) REFERENCES old(id),
   CONSTRAINT fk_act_admi FOREIGN KEY (administrator_id) REFERENCES administrator(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 历史库迁移：若 activity 已存在且缺少新列，补齐后即可支持动态服务类型
+SET @ddl := (
+  SELECT IF(
+    EXISTS(
+      SELECT 1
+      FROM information_schema.COLUMNS
+      WHERE TABLE_SCHEMA = DATABASE()
+        AND TABLE_NAME = 'activity'
+        AND COLUMN_NAME = 'service_type'
+    ),
+    'SELECT 1',
+    'ALTER TABLE activity ADD COLUMN service_type VARCHAR(64) NOT NULL DEFAULT ''other_service'''
+  )
+);
+PREPARE stmt FROM @ddl;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @ddl := (
+  SELECT IF(
+    EXISTS(
+      SELECT 1
+      FROM information_schema.COLUMNS
+      WHERE TABLE_SCHEMA = DATABASE()
+        AND TABLE_NAME = 'activity'
+        AND COLUMN_NAME = 'extra_json'
+    ),
+    'SELECT 1',
+    'ALTER TABLE activity ADD COLUMN extra_json JSON NULL'
+  )
+);
+PREPARE stmt FROM @ddl;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
 
 CREATE TABLE IF NOT EXISTS notice (
   id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
