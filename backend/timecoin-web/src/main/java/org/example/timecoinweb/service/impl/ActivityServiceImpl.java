@@ -142,7 +142,12 @@ public class ActivityServiceImpl implements ActivityService {
         activity.setRemain(activity.getQuota());
         // 管理员代为发布：直接审核通过（2），不再走待审核）
         activity.setStatus((short) 2);
-        ServiceTypeSupport.normalizeForCreate(activity, OBJECT_MAPPER);
+        if (activity.getServiceType() == null || activity.getServiceType().trim().isEmpty()) {
+            activity.setServiceType(ServiceTypeSupport.OTHER_SERVICE);
+        }
+        if (activity.getExtraJson() == null || activity.getExtraJson().trim().isEmpty()) {
+            activity.setExtraJson("{}");
+        }
 
         resolveOldIdForActivity(activity);
         normalizeVolunteerRewardForAdmin(activity, true);
