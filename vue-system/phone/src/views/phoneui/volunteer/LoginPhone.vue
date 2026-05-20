@@ -2,12 +2,6 @@
   <div class="login-container">
     <div class="login-box">
       <h1>登录</h1>
-      <div style="margin-top: 20px;margin-bottom: 20px;">登陆方式</div>
-      <div class="loginIcon">
-        <div class="login-icon wechat"/>
-        <div class="login-icon QQ"/>
-        <div class="login-icon alipay"/>
-      </div>
       <form @submit.prevent="onSubmit">
         <div class="input-group">
           <label for="username">用户名</label>
@@ -137,26 +131,5 @@ h1 {
 
 .login-btn:hover {
   background-color: #3679ec;
-}
-.loginIcon {
-  display: flex;
-  justify-content: center;
-}
-.login-icon {
-  width: 50px;
-  height: 50px;
-  border-radius: 20px;
-  background: #f5f6f8;
-  background-size: cover;
-  margin: 10px;
-  &.wechat {
-    background-image: url('~@/assets/common/wechat.png');
-  }
-  &.QQ {
-    background-image: url('~@/assets/common/QQ.png');
-  }
-  &.alipay {
-    background-image: url('~@/assets/common/alipay.png');
-  }
 }
 </style>

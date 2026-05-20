@@ -19,19 +19,12 @@
                     <div>
                         {{infoData.username}}
                     </div>
-                    <el-row :gutter="20" style="display: flex;
-                    justify-content: space-between;
-                    align-items: center;">
-                        <div>
-                            <el-statistic title="时间币总数">
-                            <template slot="formatter">
-                                {{ coinBalanceDisplay }}
-                            </template>
-                            </el-statistic>
-                        </div>
-                    </el-row>
+                    <div class="user-id-text">用户 ID：{{ infoData.id != null && infoData.id !== '' ? infoData.id : '—' }}</div>
+                    <div class="coin-total-row">
+                        <span class="coin-total-label">时间币总数</span>
+                        <span class="coin-total-value">{{ coinBalanceDisplay }}</span>
+                    </div>
                 </div>
-                <img :src="require('@/assets/common/integral1.jpg')" class="image">
             </div>
             <div class="contentBox">
                 <el-menu style="width: 100%;">
@@ -163,7 +156,7 @@ export default {
                 justify-content: center;
                 align-items: center;
                 flex-shrink: 0; /* 防止底部内容被压缩 */
-                margin-right: 40px;
+                margin-right: 0;
                 .avatar1 {
                     display: inline-block;
                     width: 60px;
@@ -184,10 +177,35 @@ export default {
                     color: #fff;
                     margin-right: 4px;
                 }
-            }
-            .image {
-                width: 100px;
-                height: auto;
+                .user-id-text {
+                    margin-top: 4px;
+                    font-size: 13px;
+                    color: var(--old-muted);
+                    font-weight: 400;
+                }
+                .coin-total-row {
+                    display: flex;
+                    flex-direction: row;
+                    align-items: baseline;
+                    justify-content: center;
+                    gap: 10px;
+                    margin-top: 10px;
+                    width: 100%;
+                    flex-wrap: nowrap;
+                }
+                .coin-total-label {
+                    font-size: 14px;
+                    color: var(--old-muted);
+                    white-space: nowrap;
+                    font-weight: 500;
+                }
+                .coin-total-value {
+                    font-size: 22px;
+                    font-weight: 700;
+                    color: var(--old-primary);
+                    line-height: 1;
+                    letter-spacing: 0.02em;
+                }
             }
         }
         .contentBox{
@@ -239,7 +257,7 @@ export default {
 }
 
 .infoBox .mainBox .titleBOX .titleBox {
-    margin-right: 24px !important;
+    margin-right: 0 !important;
     font-size: 18px;
     font-weight: 700;
 }
@@ -250,17 +268,6 @@ export default {
     height: 68px !important;
     line-height: 68px !important;
     background: var(--old-primary) !important;
-}
-
-.infoBox .mainBox .titleBOX ::v-deep .el-statistic__head {
-    color: var(--old-muted);
-    font-size: 15px;
-}
-
-.infoBox .mainBox .titleBOX ::v-deep .el-statistic__content {
-    color: var(--old-primary-strong);
-    font-size: 24px;
-    font-weight: 800;
 }
 
 .infoBox .contentBox {

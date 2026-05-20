@@ -5,6 +5,12 @@
         <div>
             {{ form.title }}
         </div>
+        <div class="reward-banner" :class="{ 'reward-banner--zero': volunteerRewardNumber <= 0 }">
+          <div class="reward-banner-main">
+            <i class="el-icon-coin"></i>
+            每人答谢 <strong>{{ volunteerRewardNumber }}</strong> 时间币
+          </div>
+        </div>
         <el-divider content-position="center">报名截止</el-divider>
         <div style="width: 100%; display: inline-block; margin-bottom: 10px;" v-if="deadline">
             <el-statistic
@@ -56,6 +62,9 @@
             </el-form-item>
             <el-form-item label="剩余名额">
                 <el-input v-model="form.remain" readonly prefix-icon="el-icon-sell"></el-input>
+            </el-form-item>
+            <el-form-item label="每人答谢">
+                <el-input :value="volunteerRewardShortLabel" readonly prefix-icon="el-icon-coin"></el-input>
             </el-form-item>
             <el-form-item label="报名截止时间">
                 <div class="block">
@@ -252,7 +261,15 @@ export default {
         },
         showClosedBanner() {
             return this.enrollmentChecked && !this.deadlineOpen && !this.isFull;
-        }
+        },
+        volunteerRewardNumber() {
+            const v = this.form.volunteerReward;
+            const n = v === null || v === undefined || v === '' ? 0 : Number(v);
+            return Number.isFinite(n) ? n : 0;
+        },
+        volunteerRewardShortLabel() {
+            return `${this.volunteerRewardNumber} 时间币`;
+        },
     },
     methods: {
         formatServiceTypeLabel(serviceType) {
@@ -501,6 +518,41 @@ export default {
     font-weight: 600;
     color: var(--vol-primary-strong);
     margin-bottom: 4px;
+  }
+
+  .reward-banner {
+    width: 100%;
+    margin-top: 10px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    border: 1px solid rgba(103, 194, 58, 0.35);
+    background: rgba(103, 194, 58, 0.08);
+    text-align: left;
+    box-sizing: border-box;
+  }
+
+  .reward-banner--zero {
+    border-color: var(--vol-border);
+    background: rgba(144, 147, 153, 0.08);
+  }
+
+  .reward-banner-main {
+    font-size: 15px;
+    color: var(--vol-primary-strong);
+    line-height: 1.4;
+  }
+
+  .reward-banner-main i {
+    margin-right: 4px;
+    color: #67c23a;
+  }
+
+  .reward-banner--zero .reward-banner-main {
+    color: #606266;
+  }
+
+  .reward-banner--zero .reward-banner-main i {
+    color: #909399;
   }
 
 }

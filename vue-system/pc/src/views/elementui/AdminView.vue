@@ -27,7 +27,7 @@
         </el-time-picker>
         <el-select v-model="searchStatus" clearable placeholder="活动状态" style="width: auto;" @change="syncTreeHighlightFromStatus">
           <el-option
-            v-for="item in options"
+            v-for="item in statusFilterOptions"
             :key="item.value"
             :label="item.label"
             :value="item.value">
@@ -231,12 +231,13 @@
           </el-input>
         </el-form-item>
         <el-form-item label="活动状态">
-          <el-select v-model="form.status" clearable placeholder="请选择" style="margin-right: 20px;">
+          <el-select v-model="form.status" clearable placeholder="请选择审核状态" style="margin-right: 20px;">
             <el-option
-              v-for="item in options"
+              v-for="item in editStatusSelectOptions"
               :key="item.value"
               :label="item.label"
-              :value="item.value">
+              :value="item.value"
+              :disabled="!!item.disabled">
             </el-option>
           </el-select>
         </el-form-item>
@@ -285,6 +286,22 @@
 import { MessageBox } from 'element-ui';// 需要单独导入
 import request from '@/utils/request';
 import { format } from 'date-fns-tz';
+
+/** 列表筛选 / 左侧树：全部状态（与后端 activity.status 一致） */
+const ALL_ACTIVITY_STATUS_OPTIONS = Object.freeze([
+  { value: 1, label: '待审核' },
+  { value: 2, label: '审核通过' },
+  { value: 3, label: '进行中' },
+  { value: 4, label: '拒绝进行' },
+  { value: 5, label: '活动过期' },
+]);
+
+/** 编辑抽屉：仅允许改为这三种审核结论（1 / 2 / 4） */
+const AUDIT_STATUS_OPTIONS = Object.freeze([
+  { value: 1, label: '待审核' },
+  { value: 2, label: '审核通过' },
+  { value: 4, label: '拒绝进行' },
+]);
 
 const SERVICE_TYPE_LABELS = Object.freeze({
   medical_rehab: '医疗康复',
@@ -356,14 +373,7 @@ export default {
           }
         }]
       },
-      // 与后端一致：1待审 2审核通过 3进行中 4拒绝 5活动过期
-      options: [
-        { value: 1, label: '待审核' },
-        { value: 2, label: '审核通过' },
-        { value: 3, label: '进行中' },
-        { value: 4, label: '拒绝进行' },
-        { value: 5, label: '活动过期' },
-      ],
+      statusFilterOptions: ALL_ACTIVITY_STATUS_OPTIONS.map((o) => ({ ...o })),
       // 搜索数据
       searchTitle: '', // 活动标题
       searchAddress: '', // 活动地点
@@ -393,7 +403,7 @@ export default {
       aiReviewExpanded: false,
       // 树控组件
       filterText: '',
-      // 左侧分类：与业务库中 activity.status 对应（原「专业类」等为占位，无字段支撑）
+      // 左侧分类：与业务库 activity.status 对应
       treeData: [
         { id: 'all', label: '全部活动' },
         { id: 's1', label: '待审核', status: 1 },
@@ -422,6 +432,20 @@ export default {
   computed: {
     serviceTypeOptions() {
       return SERVICE_TYPE_LABELS;
+    },
+    /** 抽屉内状态下拉：默认可改三种审核状态；若当前为进行中/过期则插入一条禁用项便于辨认 */
+    editStatusSelectOptions() {
+      const rows = AUDIT_STATUS_OPTIONS.map((o) => ({ ...o }));
+      const s = this.form && this.form.status;
+      const n = s !== '' && s !== null && s !== undefined ? Number(s) : NaN;
+      if (n === 3 || n === 5) {
+        rows.unshift({
+          value: n,
+          label: n === 3 ? '进行中（当前非审核态，请改为上述三种之一再保存）' : '活动过期（当前非审核态，请改为上述三种之一再保存）',
+          disabled: true,
+        });
+      }
+      return rows;
     },
     dynamicExtraFields() {
       const serviceType = this.normalizeServiceType(this.form.serviceType);
@@ -742,6 +766,14 @@ export default {
         return;
       }
 
+      const statusNum = this.form.status !== '' && this.form.status !== null && this.form.status !== undefined
+        ? Number(this.form.status)
+        : NaN;
+      if (![1, 2, 4].includes(statusNum)) {
+        this.$message.warning('活动状态仅能保存为：待审核、审核通过或拒绝进行');
+        return;
+      }
+
       const data = {
         id: this.form.id != null ? Number(this.form.id) : undefined,
         title: this.form.title,
@@ -754,7 +786,7 @@ export default {
         oldId: this.form.oldId != null && this.form.oldId !== '' ? Number(this.form.oldId) : undefined,
         phone: this.form.phone,
         description: this.form.description,
-        status: this.form.status != null && this.form.status !== '' ? Number(this.form.status) : undefined,
+        status: statusNum,
         remain: this.form.remain != null ? Number(this.form.remain) : undefined,
         message: this.form.message,
         volunteerReward: Number(this.form.volunteerReward ?? 0),

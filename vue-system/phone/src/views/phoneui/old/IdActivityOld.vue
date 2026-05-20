@@ -132,21 +132,19 @@
                                 </div>
                                 <div style="display: flex;justify-content: center;align-items: center; margin-top: 8px;">
                                     <el-button v-if="!isEndSign" round size="mini" disabled
-                                        style="margin-top: 5px;width: 45%;">服务未开始</el-button>
+                                        style="margin-top: 5px;width: 90%;">服务未开始</el-button>
                                     <el-button v-else-if="isEndSign && isVolunteerIncomplete(row)" type="success" round
                                         size="mini" @click="editUser(row.id)" :loading="loadingIds.has(row.id)" :disabled="loadingIds.has(row.id)"
-                                        style="margin-top: 5px;width: 45%;">
+                                        style="margin-top: 5px;width: 90%;">
                                         <i class="el-icon-check" style="margin-right: 4px;"></i>
                                         {{ loadingIds.has(row.id) ? '处理中...' : '标记完成' }}
                                     </el-button>
                                     <el-button v-else round size="mini" type="danger" plain
-                                        style="margin-top: 5px;width: 45%;" :loading="loadingIds.has(row.id)" :disabled="loadingIds.has(row.id)"
+                                        style="margin-top: 5px;width: 90%;" :loading="loadingIds.has(row.id)" :disabled="loadingIds.has(row.id)"
                                         @click="editUser1(row.id)">
                                         <i class="el-icon-refresh-left" style="margin-right: 4px;"></i>
                                         {{ loadingIds.has(row.id) ? '处理中...' : '撤回完成' }}
                                     </el-button>
-                                    <el-button round size="mini" type="primary" plain
-                                        style="margin-top: 5px;width: 45%;">联系志愿者</el-button>
                                 </div>
                             </div>
                         </div>

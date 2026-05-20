@@ -21,6 +21,12 @@
                             <div class="contentBox">
                             <div style="font-size: 17px;">{{ row.title }}</div>
                             <div style="font-size: 14px;">剩余名额：{{ row.remain }}</div>
+                            <div
+                              class="volunteer-reward-line"
+                              :class="{ 'volunteer-reward-line--zero': formatVolunteerRewardAmount(row) <= 0 }"
+                            >
+                              答谢（每人）：{{ formatVolunteerRewardAmount(row) }} 时间币
+                            </div>
                             <el-progress :percentage="Number(((parseFloat(row.quota) - parseFloat(row.remain)) / parseFloat(row.quota) * 100).toFixed(1))"></el-progress>
                             <div style="display: flex;justify-content: space-between;align-items: center;font-size: 12px;">
                                 {{ formatActivityDates(row) }}
@@ -95,6 +101,11 @@ export default {
             if (!activity || !activity.date) return '日期待定';
             const day = String(activity.date).split('-').pop();
             return `${parseInt(day, 10)}号`;
+        },
+        formatVolunteerRewardAmount(row) {
+            const v = row && row.volunteerReward;
+            const n = v === null || v === undefined || v === '' ? 0 : Number(v);
+            return Number.isFinite(n) ? n : 0;
         },
         load() {
             if (this.originalData.length >= this.totalItems) {
@@ -233,7 +244,7 @@ export default {
           .el-card{
             display: flex;
             padding: 5px;
-            height: 140px;
+            min-height: 156px;
             align-items: center;
             margin-bottom: 15px;
             .cardContent{
@@ -249,6 +260,16 @@ export default {
               .contentBox {
                 padding: 8px;
                 width: 60%;
+                .volunteer-reward-line {
+                  font-size: 13px;
+                  margin-top: 4px;
+                  color: #67c23a;
+                  font-weight: 500;
+                }
+                .volunteer-reward-line--zero {
+                  color: #909399;
+                  font-weight: 400;
+                }
               }
             }
             

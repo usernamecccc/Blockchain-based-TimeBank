@@ -59,7 +59,8 @@ export default {
   top: 0;
   left: 0;
   right: 0;
-  z-index: 3000;
+  /* 高于页面局部控件（如地图控件 z-index:1000），低于 Element 浮层（Message/Dialog 默认从 2000 起） */
+  z-index: 1200;
   display: flex;
   align-items: center;
   min-height: 48px;

@@ -15,6 +15,7 @@
             <span v-else class="username">{{ name?.charAt(0) }}</span>
             <div class="company-info">
               <div class="depart">{{ name }} ｜ {{ company }}-{{ departmentName }}</div>
+              <div v-if="userId != null && userId !== ''" class="user-id-tip">用户 ID：{{ userId }}</div>
             </div>
           </div>
           <!-- 代办 -->
@@ -316,6 +317,7 @@ export default {
       homeData: emptyHomeData(),
       list: [],
       name: '',
+      userId: null,
       avatar: '',
       company: '时间银行管理平台',
       departmentName: '',
@@ -494,6 +496,7 @@ export default {
           if (res.code !== 1 || !res.data) return;
           const u = res.data;
           this.userRole = u.role;
+          this.userId = u.id != null ? u.id : null;
           this.name = u.name || u.username || '';
           this.departmentName = this.roleLabel(u.role);
           if (u.image) {
@@ -706,6 +709,12 @@ export default {
             color: #383c4e;
             font-weight: 500;
             line-height: 1.4;
+          }
+          .user-id-tip {
+            margin-top: 4px;
+            font-size: 13px;
+            color: #909399;
+            font-weight: 400;
           }
         }
       }

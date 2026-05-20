@@ -22,7 +22,13 @@
                                 <el-tag size="mini" v-if="!isBeforeDeadline(row.deadline)" type="danger">报名结束</el-tag>
                                 <el-tag size="mini" v-else type="success">报名中</el-tag>
                                 </div>
-                                <div v-if="Number(row.volunteerReward) > 0" style="font-size: 13px;color: #67C23A;margin-top: 4px;">答谢：每人 {{ row.volunteerReward }} 时间币</div>
+                                <div
+                                  class="volunteer-reward-line"
+                                  :class="{ 'volunteer-reward-line--zero': formatVolunteerRewardAmount(row) <= 0 }"
+                                  style="margin-top: 4px;"
+                                >
+                                  答谢（每人）：{{ formatVolunteerRewardAmount(row) }} 时间币
+                                </div>
                                 <div style="font-size: 12px;">地址：{{ row.address }}</div>
                             </div>
                             </div>
@@ -99,6 +105,11 @@ export default {
             if (!activity || !activity.date) return '日期待定';
             const day = String(activity.date).split('-').pop();
             return `${parseInt(day, 10)}号`;
+        },
+        formatVolunteerRewardAmount(row) {
+            const v = row && row.volunteerReward;
+            const n = v === null || v === undefined || v === '' ? 0 : Number(v);
+            return Number.isFinite(n) ? n : 0;
         },
         load() {
             if (this.originalData.length >= this.totalItems) {
@@ -224,7 +235,7 @@ export default {
             padding: 8px;
             margin-left: 10px;
             margin-right: 10px;
-            height: 140px;
+            min-height: 156px;
             align-items: center;
             margin-bottom: 15px;
             background: #ffffff;
@@ -241,6 +252,16 @@ export default {
               .contentBox {
                 padding: 8px;
                 width: 60%;
+                .volunteer-reward-line {
+                  font-size: 13px;
+                  margin-top: 4px;
+                  color: #67c23a;
+                  font-weight: 500;
+                }
+                .volunteer-reward-line--zero {
+                  color: #909399;
+                  font-weight: 400;
+                }
               }
             } 
           }

@@ -9,6 +9,13 @@
             <el-descriptions :model="form" :column="1" border>
                 <el-descriptions-item>
                     <template slot="label">
+                        <i class="el-icon-postcard"></i>
+                        用户ID
+                    </template>
+                    <el-input :value="form.id != null ? String(form.id) : ''" readonly placeholder="—"></el-input>
+                </el-descriptions-item>
+                <el-descriptions-item>
+                    <template slot="label">
                         <i class="el-icon-user"></i>
                         用户名
                     </template>
@@ -90,6 +97,13 @@
                     <span>用户名</span>
                     <div>
                         {{ form.username }}
+                        <i class="el-icon-arrow-right"></i>
+                    </div>
+                </el-menu-item>
+                <el-menu-item index="2a">
+                    <span>用户ID</span>
+                    <div>
+                        {{ form.id != null ? form.id : '—' }}
                         <i class="el-icon-arrow-right"></i>
                     </div>
                 </el-menu-item>
