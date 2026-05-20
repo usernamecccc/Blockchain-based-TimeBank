@@ -1,5 +1,5 @@
 <template>
-  <ai-chat-panel user-type="volunteer" title="人工服务AI助手" />
+  <ai-chat-panel user-type="volunteer" title="志愿者端AI服务" />
 </template>
 
 <script>

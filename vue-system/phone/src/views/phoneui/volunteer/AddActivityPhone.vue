@@ -6,6 +6,11 @@
         </el-header>
         <el-container class="mainBox">
             <el-header class="groupBox">
+                <div class="status-tabs">
+                    <el-button type="text" class="status-tab" :class="{ active: activeTab === 'available' }" @click="search1">可报名</el-button>
+                    <el-button type="text" class="status-tab" :class="{ active: activeTab === 'joined' }" @click="search2">已报名</el-button>
+                    <el-button type="text" class="status-tab" :class="{ active: activeTab === 'ended' }" @click="search3">已结束</el-button>
+                </div>
                 <el-button type="text" @click="search1">可报名</el-button>
                 <el-divider direction="vertical"></el-divider>
                 <el-button type="text" @click="search2">已报名</el-button>
@@ -234,6 +239,33 @@ export default {
           display: flex;
           align-items: center;
           margin-left: 10px;
+
+          > .el-button,
+          > .el-divider {
+            display: none;
+          }
+
+          .status-tabs {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+          }
+
+          .status-tab {
+            min-width: 72px;
+            height: 32px;
+            padding: 0 12px;
+            border: 1px solid transparent;
+            border-radius: 16px;
+            box-sizing: border-box;
+            font-weight: 600;
+          }
+
+          .status-tab.active {
+            color: var(--vol-primary);
+            border-color: var(--vol-primary);
+            background: #ffffff;
+          }
         }
         .activity{
           display: flex;

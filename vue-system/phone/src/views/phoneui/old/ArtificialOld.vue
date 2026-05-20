@@ -1,5 +1,5 @@
 <template>
-  <ai-chat-panel user-type="old" title="人工服务AI助手" />
+  <ai-chat-panel user-type="old" title="老人端AI服务" />
 </template>
 
 <script>
