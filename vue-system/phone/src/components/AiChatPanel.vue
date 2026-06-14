@@ -2,7 +2,7 @@
   <div class="ai-chat-panel" :class="`ai-chat-panel--${userType}`">
     <div class="chat-header">
       <div class="header-title">{{ title }}</div>
-      <div class="header-subtitle">有问题可以直接问我</div>
+      <div class="header-subtitle">{{ headerSubtitle }}</div>
     </div>
 
     <div ref="messageList" class="message-list">
@@ -64,17 +64,29 @@ export default {
     },
   },
   data() {
+    const isVolunteer = this.userType === 'volunteer';
     return {
       input: '',
       loading: false,
       messages: [
         {
           role: 'assistant',
-          content: '你好，我是时间银行AI助手。你可以咨询活动、报名、签到、时间币或平台使用问题。',
+          content: isVolunteer
+            ? '你好，我是志愿者端AI助手。可以咨询活动报名、取消报名、签到、参与活动记录、时间币余额、转账和服务准备建议。'
+            : '你好，我是老人端AI助手。可以咨询发布服务、AI活动草稿、选择地点、查看已发布活动、时间币余额和转账。',
         },
       ],
-      quickQuestions: ['怎么报名活动', '如何签到', '时间币怎么查看'],
+      quickQuestions: isVolunteer
+        ? ['怎么报名活动', '如何签到', '怎么查看转账历史', '服务前要准备什么']
+        : ['怎么发布服务', 'AI怎么帮我填活动', '时间币怎么转账', '怎么查看我的活动'],
     };
+  },
+  computed: {
+    headerSubtitle() {
+      return this.userType === 'volunteer'
+        ? '可咨询报名、签到、时间币和服务准备'
+        : '可咨询发布服务、时间币和活动管理';
+    },
   },
   methods: {
     endpoint() {
@@ -93,10 +105,62 @@ export default {
         .replace(/'/g, '&#39;');
     },
     formatMessage(content) {
-      let html = this.escapeHtml(content);
-      html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
-      html = html.replace(/\n/g, '<br>');
-      return html;
+      const lines = this.escapeHtml(content).split(/\r?\n/);
+      const html = [];
+      let listType = null;
+
+      const closeList = () => {
+        if (listType) {
+          html.push(`</${listType}>`);
+          listType = null;
+        }
+      };
+
+      const inline = (text) => text.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+
+      lines.forEach((rawLine) => {
+        const line = rawLine.trim();
+        if (!line) {
+          closeList();
+          html.push('<br>');
+          return;
+        }
+
+        const heading = line.match(/^#{1,3}\s+(.+)$/);
+        if (heading) {
+          closeList();
+          html.push(`<div class="md-heading">${inline(heading[1])}</div>`);
+          return;
+        }
+
+        const bullet = line.match(/^[-*]\s+(.+)$/);
+        if (bullet) {
+          if (listType !== 'ul') {
+            closeList();
+            html.push('<ul class="md-list">');
+            listType = 'ul';
+          }
+          html.push(`<li>${inline(bullet[1])}</li>`);
+          return;
+        }
+
+        const ordered = line.match(/^\d+[.)]\s+(.+)$/);
+        if (ordered) {
+          if (listType !== 'ol') {
+            closeList();
+            html.push('<ol class="md-list">');
+            listType = 'ol';
+          }
+          html.push(`<li>${inline(ordered[1])}</li>`);
+          return;
+        }
+
+        closeList();
+        html.push(`<div>${inline(line)}</div>`);
+      });
+
+      closeList();
+      return html.join('');
     },
     sendMessage() {
       const text = (this.input || '').trim();
@@ -107,7 +171,7 @@ export default {
       this.loading = true;
       const pendingIndex = this.messages.push({
         role: 'assistant',
-        content: '正在思考，请稍候',
+        content: '正在思考，请稍等',
         pending: true,
       }) - 1;
       this.scrollToBottom();
@@ -190,6 +254,24 @@ export default {
       line-height: 1.55;
       word-break: break-word;
       white-space: pre-wrap;
+    }
+
+    .message-bubble ::v-deep .md-heading {
+      margin: 2px 0 8px;
+      font-size: 16px;
+      font-weight: 700;
+      line-height: 1.45;
+    }
+
+    .message-bubble ::v-deep .md-list {
+      margin: 4px 0 8px 18px;
+      padding: 0;
+      white-space: normal;
+    }
+
+    .message-bubble ::v-deep .md-list li {
+      margin: 3px 0;
+      line-height: 1.55;
     }
 
     &.assistant {
