@@ -2,7 +2,9 @@ package org.example.timecoinweb.mapper;
 
 import org.apache.ibatis.annotations.Insert;
 import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
+import org.apache.ibatis.annotations.Update;
 import org.example.pojo.User;
 import org.springframework.dao.DuplicateKeyException;
 
@@ -16,14 +18,11 @@ public interface RegisterMapper {
             "values(#{username},#{name},#{password},#{role},#{email},#{age},#{phone},#{address},#{createTime},#{updateTime})")
     void register(User user) throws DuplicateKeyException;
 
-    /**
-     * 根据用户名和密码查询
-     * @param user
-     * @return
-     */
-    @Select("select * from user where username=#{username} " +
-            "and password=#{password}")
-    User getByUsernameAndPassword(User user);
+    @Select("select * from user where username=#{username}")
+    User getByUsername(@Param("username") String username);
+
+    @Update("update user set password=#{password}, update_time=now() where id=#{id}")
+    void updatePasswordById(@Param("id") Integer id, @Param("password") String password);
 
     /**
      * 根据id查询用户自身
