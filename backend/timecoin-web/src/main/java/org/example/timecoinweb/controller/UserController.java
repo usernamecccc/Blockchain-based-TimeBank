@@ -18,6 +18,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 @Slf4j
@@ -255,6 +256,21 @@ public class UserController {
         userService.updateVolActivity(volActivity);
 
         return Result.success();
+    }
+
+    /**
+     * 老人在活动结束后，批量标记志愿者完成并链上答谢。
+     */
+    @PutMapping("/old/status/batch")
+    public Result batchCompleteVolunteers(@RequestBody Activity activity,
+                                          @RequestHeader("token") String token) {
+        if (activity == null || activity.getId() == null) {
+            return Result.error("活动 ID 不能为空");
+        }
+        Integer userId = (Integer) JwtUtils.parseJWT(token).get("id");
+        log.info("老人批量答谢志愿者，活动 id={}，userId={}", activity.getId(), userId);
+        Map<String, Object> summary = userService.batchCompleteVolunteers(userId, activity.getId());
+        return Result.success(summary);
     }
 
     /**

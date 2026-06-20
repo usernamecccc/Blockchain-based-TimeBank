@@ -2,7 +2,10 @@ package org.example.timecoinweb.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.example.pojo.ChainAccountMirror;
 import org.example.pojo.User;
+import org.example.timecoinweb.config.BlockchainProperties;
+import org.example.timecoinweb.mapper.ChainAccountMirrorMapper;
 import org.example.timecoinweb.mapper.UserMapper;
 import org.springframework.stereotype.Service;
 
@@ -22,6 +25,8 @@ public class TimeCoinChainAdminService {
 
     private final TimeCoinChainService timeCoinChainService;
     private final UserMapper userMapper;
+    private final ChainAccountMirrorMapper chainAccountMirrorMapper;
+    private final BlockchainProperties blockchainProperties;
 
     public Map<String, Object> overview(int eventLimit) {
         Map<String, Object> out = new HashMap<>();
@@ -47,13 +52,22 @@ public class TimeCoinChainAdminService {
         List<Map<String, Object>> userRows = new ArrayList<>();
         BigInteger sum = BigInteger.ZERO;
         int holders = 0;
+        int mismatchCount = 0;
         for (User u : allUsers) {
             Map<String, Object> row = baseUserRow(u);
             String chainUid = String.valueOf(u.getId());
             row.put("chainUserId", chainUid);
+            long dbBalance = u.getCoinBalance() != null ? u.getCoinBalance() : 0L;
+            row.put("dbBalance", String.valueOf(dbBalance));
             try {
                 BigInteger bal = timeCoinChainService.balanceOf(chainUid);
                 row.put("coinBalance", bal.toString());
+                boolean matched = dbBalance == bal.longValue();
+                row.put("balanceMatched", matched);
+                if (!matched) {
+                    mismatchCount++;
+                    row.put("balanceDiff", String.valueOf(bal.longValue() - dbBalance));
+                }
                 sum = sum.add(bal);
                 if (bal.signum() > 0) {
                     holders++;
@@ -68,6 +82,31 @@ public class TimeCoinChainAdminService {
         out.put("users", userRows);
         out.put("totalCirculating", sum.toString());
         out.put("holdersCount", holders);
+        out.put("balanceMismatchCount", mismatchCount);
+
+        String platformId = blockchainProperties.getFeeRecipientUserId();
+        if (platformId != null && !platformId.isEmpty()) {
+            Map<String, Object> platformRow = new HashMap<>();
+            platformRow.put("accountId", platformId);
+            platformRow.put("username", "平台账户");
+            try {
+                BigInteger chainBal = timeCoinChainService.balanceOf(platformId);
+                platformRow.put("coinBalance", chainBal.toString());
+                ChainAccountMirror mirror = chainAccountMirrorMapper.selectById(platformId);
+                long dbBal = mirror != null && mirror.getCoinBalance() != null ? mirror.getCoinBalance() : 0L;
+                platformRow.put("dbBalance", String.valueOf(dbBal));
+                boolean matched = dbBal == chainBal.longValue();
+                platformRow.put("balanceMatched", matched);
+                if (!matched) {
+                    mismatchCount++;
+                    platformRow.put("balanceDiff", String.valueOf(chainBal.longValue() - dbBal));
+                }
+            } catch (Exception e) {
+                platformRow.put("balanceError", e.getMessage());
+            }
+            out.put("platformAccount", platformRow);
+            out.put("balanceMismatchCount", mismatchCount);
+        }
 
         List<Map<String, Object>> events;
         try {
@@ -99,6 +138,7 @@ public class TimeCoinChainAdminService {
         for (User u : allUsers) {
             Map<String, Object> row = baseUserRow(u);
             row.put("chainUserId", String.valueOf(u.getId()));
+            row.put("dbBalance", u.getCoinBalance() != null ? String.valueOf(u.getCoinBalance()) : "0");
             row.put("coinBalance", null);
             list.add(row);
         }

@@ -43,8 +43,12 @@
 
 
     <select id="volSelectPageActivity" resultType="org.example.pojo.Activity">
-        select distinct act.*
-        from activity as act,activity_volunteer as av
+        select distinct act.*,
+               av.sign as volSign,
+               av.status as volActStatus,
+               av.reward_paid as volRewardPaid
+        from activity as act
+        inner join activity_volunteer as av on act.id = av.activity_id
         <where>
             <if test="oldId!=null">
                 act.old_id=#{oldId}

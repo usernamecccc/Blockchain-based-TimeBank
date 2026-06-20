@@ -5,6 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.example.pojo.Result;
 import org.example.pojo.User;
 import org.example.timecoinweb.config.BlockchainProperties;
+import org.example.timecoinweb.config.ImageUploadConfig;
 import org.example.timecoinweb.service.RegisterService;
 import org.example.timecoinweb.service.TimeCoinChainService;
 import org.example.timecoinweb.service.UserService;
@@ -14,9 +15,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.File;
 import java.io.IOException;
 import java.math.BigInteger;
+import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -36,6 +37,8 @@ public class SelfController {
     private TimeCoinChainService timeCoinChainService;
     @Autowired
     private BlockchainProperties blockchainProperties;
+    @Autowired
+    private ImageUploadConfig imageUploadConfig;
 
     /**
      * 老人发布活动在链上的扣费数量（供移动端确认提示；与 {@code blockchain.old-publish-activity-cost} 一致）。
@@ -137,17 +140,18 @@ public class SelfController {
         //找到id
         Integer id=(Integer) claims.get("id");;
 
-        log.info("文件上传：userId为{}，图片为{}",id,image);
+        log.info("文件上传：userId为{}，原始文件名:{}", id, image.getOriginalFilename());
 
-        //获取原始文件名
-        String originalFilename=image.getName();
-        int index=originalFilename.lastIndexOf(".");
-        String extname=originalFilename.substring(index);//获取后缀名
-        log.info("获取的新文件名：{}",id+extname);
+        String originalFilename = image.getOriginalFilename();
+        if (originalFilename == null || !originalFilename.contains(".")) {
+            return Result.error("文件名无效");
+        }
+        String extname = originalFilename.substring(originalFilename.lastIndexOf("."));
+        String local = id + extname;
+        log.info("保存头像文件名：{}", local);
 
-        //将文件存储在服务器的磁盘目录中D:\java\image
-        image.transferTo(new File("D:\\java\\image\\"+id+extname));
-        String local=id+extname;
+        Path dest = imageUploadConfig.getUploadDir().resolve(local);
+        image.transferTo(dest.toFile());
 
         //存图片名到数据库
         userService.updateImage(local,id);

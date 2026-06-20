@@ -16,6 +16,7 @@ import org.example.timecoinweb.service.UserService;
 import org.example.timecoinweb.util.ServiceTypeSupport;
 import org.example.utils.DistanceUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.dao.DataAccessException;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
@@ -28,6 +29,8 @@ import java.math.BigInteger;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -54,6 +57,9 @@ public class UserServiceImpl implements UserService {
     TimeCoinChainService timeCoinChainService;
     @Autowired
     CompensationMapper compensationMapper;
+    @Autowired
+    @Lazy
+    private UserService userService;
 
     /**
      * 老人增加活动
@@ -127,7 +133,7 @@ public class UserServiceImpl implements UserService {
                 throw new IllegalStateException(
                         "时间币余额不足：发布活动需要 " + cost + "，当前余额 " + bal);
             }
-            timeCoinChainService.transfer(from, to, cost);
+            timeCoinChainService.transfer(from, to, cost, "PUBLISH_FEE", String.valueOf(userId));
         } catch (IllegalStateException e) {
             throw e;
         } catch (Exception e) {
@@ -372,6 +378,64 @@ public class UserServiceImpl implements UserService {
         volMapper.update(volActivity);
     }
 
+    @Override
+    public Map<String, Object> batchCompleteVolunteers(Integer elderlyUserId, Integer activityId) {
+        Integer oldId = oldMapper.selectOldId(elderlyUserId);
+        if (oldId == null) {
+            throw new IllegalStateException("当前账号不是老人用户");
+        }
+        Activity activity = activityMapper.selectByActId(activityId);
+        if (activity == null) {
+            throw new IllegalStateException("活动不存在");
+        }
+        if (activity.getOldId() != oldId) {
+            throw new IllegalStateException("无权操作该活动");
+        }
+        if (activity.getDate() == null || activity.getEnd() == null) {
+            throw new IllegalStateException("活动时间不完整，无法批量答谢");
+        }
+        LocalDateTime activityEnd = LocalDateTime.of(activity.getDate(), activity.getEnd());
+        if (LocalDateTime.now().isBefore(activityEnd)) {
+            throw new IllegalStateException("活动尚未结束，请结束后再一键答谢");
+        }
+
+        List<Vol> volunteers = volMapper.selectUsers(activityId);
+        int successCount = 0;
+        int skipCount = 0;
+        List<Map<String, String>> failures = new ArrayList<>();
+
+        for (Vol vol : volunteers) {
+            if (vol.getStatus() != null && vol.getStatus() == 1) {
+                skipCount++;
+                continue;
+            }
+            VolActivity volActivity = new VolActivity();
+            volActivity.setUserId(vol.getId());
+            volActivity.setActivityId(activityId);
+            volActivity.setStatus((short) 1);
+            try {
+                userService.updateVolActivity(volActivity);
+                successCount++;
+            } catch (Exception e) {
+                Map<String, String> fail = new HashMap<>();
+                fail.put("userId", String.valueOf(vol.getId()));
+                fail.put("name", vol.getName() != null ? vol.getName() : "");
+                fail.put("reason", e.getMessage() != null ? e.getMessage() : "操作失败");
+                failures.add(fail);
+                log.warn("批量答谢失败 userId={} activityId={}", vol.getId(), activityId, e);
+            }
+        }
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("successCount", successCount);
+        result.put("skipCount", skipCount);
+        result.put("failCount", failures.size());
+        result.put("failures", failures);
+        result.put("rewardPerVolunteer",
+                activity.getVolunteerReward() != null ? activity.getVolunteerReward() : 0);
+        return result;
+    }
+
     /** 每名志愿者仅能成功答谢一次（行锁保障，同一事务内更新 status + reward_paid）。链上不可逆。 */
     private void transferVolunteerRewardOnChain(Activity act, int volunteerTableId, int rewardUnits) throws IllegalStateException {
         Integer elderUserId = oldMapper.selectUserId(act.getOldId());
@@ -388,7 +452,8 @@ public class UserServiceImpl implements UserService {
                 throw new IllegalStateException(
                         "老人链上余额不足本次答谢所需 " + amount + " 时间币，当前余额 " + balance + "（请先为该老人 mint 或减少答谢金额后再标记完成）");
             }
-            timeCoinChainService.transfer(fromId, toId, amount);
+            timeCoinChainService.transfer(fromId, toId, amount, "VOLUNTEER_REWARD",
+                    "activity:" + act.getId() + ",vol:" + volunteerTableId);
         } catch (IllegalStateException e) {
             throw e;
         } catch (Exception e) {
@@ -415,7 +480,8 @@ public class UserServiceImpl implements UserService {
                 throw new IllegalStateException(
                         "平台账户余额不足本次垫付所需 " + amount + " 时间币，当前余额 " + balance + "，请联系管理员充值平台账户后再撤回。");
             }
-            timeCoinChainService.transfer(fromId, toId, amount);
+            timeCoinChainService.transfer(fromId, toId, amount, "PLATFORM_COMPENSATION",
+                    "activity:" + act.getId() + ",vol:" + volunteerTableId);
             CompensationRecord record = new CompensationRecord();
             record.setActivityId(act.getId());
             record.setVolunteerTableId(volunteerTableId);

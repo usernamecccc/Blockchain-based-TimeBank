@@ -1,62 +1,103 @@
 <template>
-    <div class="addActivityBox">
-        <el-header class="header">
-            <el-button type="text" @click="searchBeginActivity" style="margin-left: 100px;">已报名</el-button>
-            <el-divider direction="vertical"></el-divider>
-            <el-button type="text" @click="searchEndActivity" style="margin-right: 100px;">已结束</el-button>
-        </el-header>
-        <el-container class="mainBox">
-            <el-main class="activity">
-                <ul class="infinite-list" v-infinite-scroll="load" infinite-scroll-disabled="busy" infinite-scroll-distance="5" style="overflow:auto;padding-inline-start:0px">
-                    <div v-if="tableData && tableData.length > 0">
-                        <div v-for="(row, index) in tableData" :key="index" @click="handleCardClick(row)">
-                        <el-card :body-style="{ padding: '0px' }" shadow="always">
-                            <div class="cardContent">
-                            <img :src="$activityImagePath" class="image">
-                            <div class="contentBox">
-                                <div>活动：{{ row.title }}</div>
-                                <div>剩余名额：{{ row.remain }}</div>
-                                <el-progress :percentage="Number(((parseFloat(row.quota) - parseFloat(row.remain)) / parseFloat(row.quota) * 100).toFixed(1))"></el-progress>
-                                <div style="display: flex;justify-content: space-between;align-items: center;">
-                                活动日期：{{ formatActivityDates(row) }}
-                                <el-tag size="mini" v-if="!isBeforeDeadline(row.deadline)" type="danger">报名结束</el-tag>
-                                <el-tag size="mini" v-else type="success">报名中</el-tag>
-                                </div>
-                                <div
-                                  class="volunteer-reward-line"
-                                  :class="{ 'volunteer-reward-line--zero': formatVolunteerRewardAmount(row) <= 0 }"
-                                  style="margin-top: 4px;"
+    <div class="activity-list-page with-footer">
+        <div class="page-header">
+            <h1 class="page-title">我报名的活动</h1>
+            <p class="page-subtitle">查看签到进度、服务状态与时间币答谢</p>
+        </div>
+
+        <div class="toolbar">
+            <el-input
+                v-model="searchTitle"
+                placeholder="搜索已报名活动"
+                prefix-icon="el-icon-search"
+                clearable
+                @keyup.enter.native="handleSearch"
+            />
+            <el-button type="primary" round @click="handleSearch">搜索</el-button>
+        </div>
+
+        <div class="status-tabs">
+            <el-button
+                v-for="tab in filterTabs"
+                :key="tab.value"
+                type="text"
+                class="status-tab"
+                :class="{ active: activeTab === tab.value }"
+                @click="switchTab(tab.value)"
+            >{{ tab.label }}</el-button>
+        </div>
+
+        <div class="list-panel" v-loading="listLoading">
+            <el-empty
+                v-if="!listLoading && tableData.length === 0"
+                :description="emptyHint"
+                class="list-empty"
+            />
+
+            <div v-else class="list-content">
+                <ul class="activity-list">
+                    <li
+                        v-for="row in tableData"
+                        :key="row.id"
+                        class="activity-card"
+                        @click="handleCardClick(row)"
+                    >
+                        <img :src="$activityImagePath" class="card-image" alt="">
+                        <div class="card-body">
+                            <div class="card-title">{{ row.title }}</div>
+                            <div class="card-tags">
+                                <el-tag size="mini" :type="getStatusTag(row).type">
+                                    {{ getStatusTag(row).label }}
+                                </el-tag>
+                                <el-tag v-if="Number(row.volSign) === 1" size="mini" type="success">已签到</el-tag>
+                                <el-tag v-else size="mini" type="info" effect="plain">未签到</el-tag>
+                            </div>
+                            <div class="card-meta">
+                                <span>名额 {{ filledQuota(row) }}/{{ row.quota }}</span>
+                                <span
+                                    class="reward-text"
+                                    :class="{ 'reward-text--zero': formatVolunteerRewardAmount(row) <= 0 }"
                                 >
-                                  答谢（每人）：{{ formatVolunteerRewardAmount(row) }} 时间币
-                                </div>
-                                <div style="font-size: 12px;">地址：{{ row.address }}</div>
+                                    答谢 {{ formatVolunteerRewardAmount(row) }} 币/人
+                                </span>
                             </div>
+                            <el-progress
+                                :percentage="quotaPercent(row)"
+                                :stroke-width="8"
+                                :show-text="false"
+                                class="card-progress"
+                            />
+                            <div class="card-info">
+                                <div><i class="el-icon-date"></i> {{ formatActivityDates(row) }}</div>
+                                <div class="card-address"><i class="el-icon-location-outline"></i> {{ row.address }}</div>
                             </div>
-                        </el-card>
                         </div>
-                    </div>
-                    <div v-else>
-                        <el-empty description="暂无数据"></el-empty>
-                    </div>
+                    </li>
                 </ul>
-            </el-main>
-        </el-container>
+                <div v-if="hasMore" class="load-more-wrap">
+                    <el-button round :loading="busy" @click="loadMore">
+                        {{ busy ? '加载中…' : '加载更多' }}
+                    </el-button>
+                </div>
+                <p v-else-if="tableData.length > 0" class="list-end-hint">已显示全部活动</p>
+            </div>
+        </div>
 
         <el-footer class="operations">
             <span>
-            <router-link to="/homePhone" class="RouterLink">
-                <i class="el-icon-house"></i>首页
-            </router-link>
+                <router-link to="/homePhone" class="RouterLink">
+                    <i class="el-icon-house"></i>首页
+                </router-link>
             </span>
             <span>
-            <router-link to="/addActivityPhone" class="RouterLink">
-                <i class="el-icon-circle-plus"></i>报名活动
-            </router-link>
+                <router-link to="/addActivityPhone" class="RouterLink">
+                    <i class="el-icon-circle-plus"></i>报名活动
+                </router-link>
             </span>
             <span>
-            <router-link to="/infoOfUserPhone" class="RouterLink">
-                <i class="el-icon-user-solid"></i>个人中心
-            </router-link>
+                <router-link to="/infoOfUserPhone" class="RouterLink">
+                    <i class="el-icon-user-solid"></i>个人中心
+                </router-link>
             </span>
         </el-footer>
     </div>
@@ -64,226 +105,165 @@
 
 <script>
 import request from '@/utils/request';
+import {
+    formatActivityDates,
+    formatVolunteerRewardAmount,
+    getActivityCardStatus,
+    filterActivitiesByTab,
+    quotaPercent,
+    filledQuota,
+} from '@/utils/volunteerActivity';
 
 export default {
     name: 'ActivityOfUser',
     data() {
         return {
-            // 当前筛选: joined(已报名) | ended(已结束)
+            filterTabs: [
+                { label: '已报名', value: 'joined' },
+                { label: '进行中', value: 'ongoing' },
+                { label: '已结束', value: 'ended' },
+            ],
             activeTab: 'joined',
-            // 卡片
+            searchTitle: '',
             originalData: [],
-            pageSize: 5, // 每页显示的条目数量
-            totalItems: 0, // 总条目数量
-            currentPage: 1, // 当前页码
-            tableData: [], // 表格数据
-            // 无限滚动
+            pageSize: 8,
+            totalItems: 0,
+            currentPage: 1,
+            tableData: [],
+            listLoading: false,
             busy: false,
-        }
+        };
+    },
+    computed: {
+        emptyHint() {
+            const map = {
+                joined: '暂无已报名活动',
+                ongoing: '暂无进行中的活动',
+                ended: '暂无已结束活动',
+            };
+            return map[this.activeTab] || '暂无数据';
+        },
+        hasMore() {
+            return this.originalData.length < this.totalItems;
+        },
     },
     mounted() {
-        // 初始化时计算当前页的数据
-        this.search();
-        
+        this.reloadList();
+    },
+    activated() {
+        this.reloadList();
     },
     methods: {
-        formatActivityDates(activity) {
-            const message = activity && activity.message ? String(activity.message) : '';
-            if (message) {
-                try {
-                    const parsed = JSON.parse(message);
-                    if (parsed && Array.isArray(parsed.dates) && parsed.dates.length > 0) {
-                        return parsed.dates
-                            .map(item => String(item).split('-').pop())
-                            .map(day => `${parseInt(day, 10)}号`)
-                            .join(',');
-                    }
-                } catch (error) {
-                    // Ignore malformed legacy message
-                }
-            }
-            if (!activity || !activity.date) return '日期待定';
-            const day = String(activity.date).split('-').pop();
-            return `${parseInt(day, 10)}号`;
+        formatActivityDates,
+        formatVolunteerRewardAmount,
+        quotaPercent,
+        filledQuota,
+        switchTab(tab) {
+            if (this.activeTab === tab) return;
+            this.activeTab = tab;
+            this.applyTabFilter();
         },
-        formatVolunteerRewardAmount(row) {
-            const v = row && row.volunteerReward;
-            const n = v === null || v === undefined || v === '' ? 0 : Number(v);
-            return Number.isFinite(n) ? n : 0;
+        getStatusTag(row) {
+            const scene = this.activeTab === 'ended' ? 'ended' : 'joined';
+            return getActivityCardStatus(row, scene);
         },
-        load() {
-            if (this.originalData.length >= this.totalItems) {
-                
-                return;
-            }
-            if (this.busy) return;
-            this.busy = true;
-
-            // 调用你的search方法来获取新的数据
-            this.search().finally(() => {
-                this.busy = false;
-            });
-        },
-        search() {
-            return new Promise((resolve, reject) => {
-                const params = new URLSearchParams();
-                params.append('pageSize', this.pageSize);
-                params.append('page', this.currentPage);
-                const queryString = params.toString();
-
-                request.get(`users/vol/activity?${queryString}`)
-                    .then(response => {
-                    if (response.code === 1) {
-                        this.totalItems = response.data.total;
-                        this.originalData = [...this.originalData, ...response.data.rows];
-                        this.applyTabFilter();
-                        this.currentPage++;
-                        resolve(this.tableData);
-                    } else {
-                        this.$message.error(response.msg);
-                        reject(response.msg);
-                    }
-                    })
-                    .catch(error => {
-                        console.error('获取数据失败:', error);
-                        reject(error);
-                    });
-            });
-        },
-        applyTabFilter() {
-            const now = new Date();
-            this.tableData = this.originalData.filter(row => {
-                const activityEnd = new Date(`${row.date}T${row.end}`);
-
-                if (this.activeTab === 'joined') {
-                    if (isNaN(activityEnd)) return true;
-                    return now <= activityEnd;
-                }
-
-                if (isNaN(activityEnd)) return false;
-                return now > activityEnd;
-            });
-        },
-        resetAndSearch() {
+        reloadList() {
             this.currentPage = 1;
             this.totalItems = 0;
             this.originalData = [];
             this.tableData = [];
-            this.search();
+            this.busy = false;
+            this.listLoading = true;
+            return this.fetchPage()
+                .then(() => {
+                    this.currentPage = 2;
+                })
+                .finally(() => {
+                    this.listLoading = false;
+                });
+        },
+        fetchPage() {
+            const params = new URLSearchParams();
+            params.append('pageSize', String(this.pageSize));
+            params.append('page', String(this.currentPage));
+            const title = (this.searchTitle || '').trim();
+            if (title) params.append('title', title);
+
+            return request.get(`users/vol/activity?${params}`)
+                .then((response) => {
+                    if (response.code === 1) {
+                        this.totalItems = response.data.total;
+                        this.originalData = [...this.originalData, ...(response.data.rows || [])];
+                        this.applyTabFilter();
+                        return this.tableData;
+                    }
+                    this.$message.error(response.msg);
+                    return Promise.reject(response.msg);
+                })
+                .catch((error) => {
+                    console.error('获取数据失败:', error);
+                    return Promise.reject(error);
+                });
+        },
+        applyTabFilter() {
+            this.tableData = filterActivitiesByTab(this.originalData, this.activeTab, 'joined');
+        },
+        loadMore() {
+            if (!this.hasMore || this.busy || this.listLoading) return;
+            this.busy = true;
+            this.fetchPage()
+                .then(() => {
+                    this.currentPage++;
+                })
+                .finally(() => {
+                    this.busy = false;
+                });
+        },
+        handleSearch() {
+            this.reloadList();
         },
         handleCardClick(row) {
-            // 在发送路由跳转时将数据作为查询参数传递
-            this.$router.push({ 
-                name: 'RegisteredActivity', 
-                query: { 
-                    id: row.id
-                } 
+            this.$router.push({
+                name: 'RegisteredActivity',
+                query: { id: row.id },
             });
         },
-        // 判断是否在报名截止日期之前
-        isBeforeDeadline(deadline) {
-            // 将截止日期字符串转换为日期对象
-            const deadlineDate = new Date(deadline);
-            // 获取当前时间
-            const currentDate = new Date();
-            // 如果当前时间早于截止日期，则返回 true，否则返回 false
-            return currentDate < deadlineDate;
-        },
-        searchBeginActivity() {
-            this.activeTab = 'joined';
-            this.resetAndSearch();
-        },
-        searchEndActivity() {
-            this.activeTab = 'ended';
-            this.resetAndSearch();
-        }
-    }
-}
+    },
+};
 </script>
 
 <style lang="scss" scoped>
-.addActivityBox {
-    min-height: calc(100vh - 48px);
-    padding-bottom: 78px;
-    background: var(--vol-bg);
+@import '@/styles/volunteer-activity-list.scss';
 
-    .header{
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        border: 1px solid #DCDFE6;
-        padding: 0px;
-        margin: 5px;
-        background: #ffffff;
+.activity-list-page {
+    @include volunteer-activity-list-page;
+
+    &.with-footer {
+        min-height: calc(100vh - 48px);
+        padding-bottom: 78px;
     }
-    .searchBox{
-        margin-top: 5px;
-        margin-bottom: 8px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }
-    .mainBox{
-        .activity{
-          display: flex;
-          flex-direction: column;
-          justify-content: center; /* 水平居中 */
-          align-items: center; /* 垂直居中 */
-          padding: 0px;
-          .el-card{
-            display: flex;
-            padding: 8px;
-            margin-left: 10px;
-            margin-right: 10px;
-            min-height: 156px;
-            align-items: center;
-            margin-bottom: 15px;
-            background: #ffffff;
-            .cardContent{
-              display: flex;
-              justify-content: space-between;
-              align-items: center;
-              .image {
-                width: 40%;
-                display: block;
-                border-radius: 10px;
-                box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
-              }
-              .contentBox {
-                padding: 8px;
-                width: 60%;
-                .volunteer-reward-line {
-                  font-size: 13px;
-                  margin-top: 4px;
-                  color: #67c23a;
-                  font-weight: 500;
-                }
-                .volunteer-reward-line--zero {
-                  color: #909399;
-                  font-weight: 400;
-                }
-              }
-            } 
-          }
-        }
-    }
-    .operations{
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-top: 10px;
-      backdrop-filter: blur(10px);
-      background: rgba(255, 255, 255, 0.96);
-      border-radius: 5px;
-      box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
-      flex-shrink: 0; /* 防止底部内容被压缩 */
-      position: fixed; /* 将底部组件固定在页面底部 */
-      bottom: 0;
-      width: 100%; /* 设置宽度为 100% */
-      .RouterLink {
+}
+
+.operations {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 10px;
+    backdrop-filter: blur(10px);
+    background: rgba(255, 255, 255, 0.96);
+    border-radius: 5px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+    flex-shrink: 0;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    z-index: 10;
+
+    .RouterLink {
         text-decoration: none;
-      }
-
+        color: var(--vol-primary);
+        font-size: 13px;
     }
 }
 </style>

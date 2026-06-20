@@ -52,6 +52,7 @@ public class TimeCoinChainService {
     private final ObjectProvider<Web3j> web3jProvider;
     private final ObjectProvider<Credentials> credentialsProvider;
     private final UserMapper userMapper;
+    private final ObjectProvider<CoinBalanceLedgerService> coinBalanceLedgerProvider;
 
     private String getUserNameOrDefault(String userIdStr, String defaultValue) {
         if (!StringUtils.hasText(userIdStr) || "平台".equals(userIdStr)) {
@@ -100,6 +101,10 @@ public class TimeCoinChainService {
      * @param userId 业务用户标识（与合约中 string 一致，例如数据库主键字符串）
      */
     public String mint(String userId, BigInteger amount) throws Exception {
+        return mint(userId, amount, null, null);
+    }
+
+    public String mint(String userId, BigInteger amount, String bizType, String bizRef) throws Exception {
         requireReady();
         String normalizedUserId = requireUserId(userId, "userId");
         BigInteger validAmount = requirePositiveAmount(amount);
@@ -107,10 +112,21 @@ public class TimeCoinChainService {
                 "mint",
                 Arrays.asList(new Utf8String(normalizedUserId), new Uint256(validAmount)),
                 Collections.emptyList());
-        return sendTransaction(FunctionEncoder.encode(function));
+        String txHash = sendTransaction(FunctionEncoder.encode(function));
+        recordLedgerAfterTx(() -> {
+            CoinBalanceLedgerService ledger = coinBalanceLedgerProvider.getIfAvailable();
+            if (ledger != null) {
+                ledger.recordMint(normalizedUserId, validAmount, txHash, bizType, bizRef);
+            }
+        });
+        return txHash;
     }
 
     public String transfer(String fromUserId, String toUserId, BigInteger amount) throws Exception {
+        return transfer(fromUserId, toUserId, amount, null, null);
+    }
+
+    public String transfer(String fromUserId, String toUserId, BigInteger amount, String bizType, String bizRef) throws Exception {
         requireReady();
         String normalizedFromUserId = requireUserId(fromUserId, "fromUserId");
         String normalizedToUserId = requireUserId(toUserId, "toUserId");
@@ -122,7 +138,14 @@ public class TimeCoinChainService {
                 "transfer",
                 Arrays.asList(new Utf8String(normalizedFromUserId), new Utf8String(normalizedToUserId), new Uint256(validAmount)),
                 Collections.emptyList());
-        return sendTransaction(FunctionEncoder.encode(function));
+        String txHash = sendTransaction(FunctionEncoder.encode(function));
+        recordLedgerAfterTx(() -> {
+            CoinBalanceLedgerService ledger = coinBalanceLedgerProvider.getIfAvailable();
+            if (ledger != null) {
+                ledger.recordTransfer(normalizedFromUserId, normalizedToUserId, validAmount, txHash, bizType, bizRef);
+            }
+        });
+        return txHash;
     }
 
     public BigInteger balanceOf(String userId) throws Exception {
@@ -193,6 +216,14 @@ public class TimeCoinChainService {
             throw new IllegalStateException("链上交易失败: " + send.getError().getMessage());
         }
         return send.getTransactionHash();
+    }
+
+    private static void recordLedgerAfterTx(Runnable action) {
+        try {
+            action.run();
+        } catch (Exception e) {
+            log.error("链上交易已成功，但数据库余额镜像更新失败，请尽快执行对账修正", e);
+        }
     }
 
     /**

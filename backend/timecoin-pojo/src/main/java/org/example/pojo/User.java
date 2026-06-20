@@ -23,4 +23,9 @@ public class User {
     private LocalDateTime createTime;
     private LocalDateTime updateTime;
     private String image;
+
+    /** 时间币余额镜像（与链上 balanceOf 对账，链为权威数据源） */
+    private Long coinBalance;
+    /** 最近一次对账/同步时间 */
+    private LocalDateTime balanceSyncTime;
 }

@@ -11,6 +11,16 @@
           />
           <el-button type="primary" round class="toolbar-search-btn" @click="handleSearchClick">搜索</el-button>
         </div>
+        <div class="status-tabs-row">
+          <el-button
+            v-for="tab in filterTabs"
+            :key="tab.value"
+            type="text"
+            class="status-tab"
+            :class="{ active: activeFilter === tab.value }"
+            @click="switchFilter(tab.value)"
+          >{{ tab.label }}</el-button>
+        </div>
         <div class="blockOfImage">
           <el-carousel height="150px">
             <el-carousel-item v-for="(item, index) in images" :key="index">
@@ -38,7 +48,8 @@
         <div class="activities">
           <el-main class="activity">
             <ul class="infinite-list" v-infinite-scroll="load" infinite-scroll-disabled="busy" infinite-scroll-distance="5" style="overflow:auto;padding-inline-start:0px">
-              <div v-for="(row, index) in tableData" :key="index" @click="handleCardClick(row)">
+              <el-empty v-if="displayData.length === 0 && !busy" description="暂无符合条件的活动"></el-empty>
+              <div v-for="(row, index) in displayData" :key="row.id || index" @click="handleCardClick(row)">
                 <el-card :body-style="{ padding: '0px' }" shadow="always">
                   <div class="cardContent">
                     <img :src="$activityImagePath" class="image">
@@ -54,8 +65,7 @@
                       <el-progress :percentage="Number(((parseFloat(row.quota) - parseFloat(row.remain)) / parseFloat(row.quota) * 100).toFixed(1))"></el-progress>
                       <div style="display: flex;justify-content: space-between;align-items: center;font-size: 12px;">
                         {{ formatActivityDates(row) }}
-                      <el-tag size="mini" v-if="!isBeforeDeadline(row.deadline)" type="danger">报名结束</el-tag>
-                      <el-tag size="mini" v-else type="success">报名中</el-tag>
+                        <el-tag size="mini" :type="getStatusTag(row).type">{{ getStatusTag(row).label }}</el-tag>
                       </div>
                       <div style="font-size: 12px;">{{ row.address }}</div>
                     </div>
@@ -71,11 +81,23 @@
 
 <script>
 import request from '@/utils/request';
+import {
+  formatActivityDates,
+  formatVolunteerRewardAmount,
+  getActivityCardStatus,
+  filterActivitiesByTab,
+} from '@/utils/volunteerActivity';
 
 export default {
   name: 'HomePhone',
   data() {
     return {
+      filterTabs: [
+        { label: '全部', value: 'all' },
+        { label: '可报名', value: 'available' },
+        { label: '即将截止', value: 'closing' },
+      ],
+      activeFilter: 'all',
       // 照片
       images: [
         { url: require('@/assets/common/Carousel1.png'), link: 'https://chinavolunteer.mca.gov.cn/nvsiwebsite/XLFZYFW' },
@@ -93,7 +115,12 @@ export default {
       notices: [],
       noticesLoading: false,
       activeNotice: '',
-    }
+    };
+  },
+  computed: {
+    displayData() {
+      return filterActivitiesByTab(this.tableData, this.activeFilter, 'browse');
+    },
   },
   mounted() {
     this.fetchNotices();
@@ -146,29 +173,15 @@ export default {
       }
       return '';
     },
-    formatActivityDates(activity) {
-      const message = activity && activity.message ? String(activity.message) : '';
-      if (message) {
-        try {
-          const parsed = JSON.parse(message);
-          if (parsed && Array.isArray(parsed.dates) && parsed.dates.length > 0) {
-            return parsed.dates
-              .map(item => String(item).split('-').pop())
-              .map(day => `${parseInt(day, 10)}号`)
-              .join(',');
-          }
-        } catch (error) {
-          // Ignore malformed legacy message
-        }
-      }
-      if (!activity || !activity.date) return '日期待定';
-      const day = String(activity.date).split('-').pop();
-      return `${parseInt(day, 10)}号`;
+    switchFilter(value) {
+      this.activeFilter = value;
     },
+    getStatusTag(row) {
+      return getActivityCardStatus(row, 'browse');
+    },
+    formatActivityDates,
     formatVolunteerRewardAmount(row) {
-      const v = row && row.volunteerReward;
-      const n = v === null || v === undefined || v === '' ? 0 : Number(v);
-      return Number.isFinite(n) ? n : 0;
+      return formatVolunteerRewardAmount(row);
     },
     load() {
       if (this.tableData.length >= this.totalItems) {
@@ -231,17 +244,13 @@ export default {
           } 
       });
     },
-    // 判断是否在报名截止日期之前
+    // 判断是否在报名截止日期之前（保留兼容）
     isBeforeDeadline(deadline) {
-      // 将截止日期字符串转换为日期对象
       const deadlineDate = new Date(deadline);
-      // 获取当前时间
-      const currentDate = new Date();
-      // 如果当前时间早于截止日期，则返回 true，否则返回 false
-      return currentDate < deadlineDate;
+      return new Date() < deadlineDate;
     },
-  }
-}
+  },
+};
 </script>
 
 <style lang="scss" scoped>
@@ -275,6 +284,27 @@ export default {
       .toolbar-search-btn{
         flex-shrink: 0;
       }
+    }
+    .status-tabs-row {
+      display: flex;
+      gap: 8px;
+      margin: 10px 10px 0;
+      padding: 4px;
+      overflow-x: auto;
+    }
+    .status-tab {
+      flex-shrink: 0;
+      min-width: 72px;
+      height: 32px;
+      padding: 0 12px;
+      border: 1px solid transparent;
+      border-radius: 16px;
+      font-weight: 600;
+    }
+    .status-tab.active {
+      color: var(--vol-primary);
+      border-color: var(--vol-primary);
+      background: #ffffff;
     }
     // 走马灯
     .blockOfImage{

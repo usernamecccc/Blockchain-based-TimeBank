@@ -108,3 +108,44 @@ WHERE NOT EXISTS (SELECT 1 FROM `user` WHERE username = 'admin');
 INSERT INTO administrator (user_id)
 SELECT u.id FROM `user` u WHERE u.username = 'admin'
 AND NOT EXISTS (SELECT 1 FROM administrator a WHERE a.user_id = u.id);
+
+ALTER TABLE `user` ADD COLUMN IF NOT EXISTS coin_balance BIGINT NOT NULL DEFAULT 0;
+ALTER TABLE `user` ADD COLUMN IF NOT EXISTS balance_sync_time TIMESTAMP NULL;
+
+CREATE TABLE IF NOT EXISTS chain_account_mirror (
+  account_id VARCHAR(64) NOT NULL PRIMARY KEY,
+  coin_balance BIGINT NOT NULL DEFAULT 0,
+  balance_sync_time TIMESTAMP NULL,
+  update_time TIMESTAMP NULL
+);
+
+INSERT INTO chain_account_mirror (account_id, coin_balance)
+SELECT 'platform', 0 WHERE NOT EXISTS (SELECT 1 FROM chain_account_mirror WHERE account_id = 'platform');
+
+CREATE TABLE IF NOT EXISTS chain_tx_log (
+  id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  tx_type VARCHAR(16) NOT NULL,
+  from_account VARCHAR(64),
+  to_account VARCHAR(64) NOT NULL,
+  amount BIGINT NOT NULL,
+  tx_hash VARCHAR(128),
+  biz_type VARCHAR(64),
+  biz_ref VARCHAR(128),
+  create_time TIMESTAMP DEFAULT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_chain_tx_hash ON chain_tx_log(tx_hash);
+CREATE INDEX IF NOT EXISTS idx_chain_tx_to ON chain_tx_log(to_account);
+CREATE INDEX IF NOT EXISTS idx_chain_tx_from ON chain_tx_log(from_account);
+CREATE INDEX IF NOT EXISTS idx_chain_tx_time ON chain_tx_log(create_time);
+
+CREATE TABLE IF NOT EXISTS chain_reconcile_log (
+  id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  run_time TIMESTAMP NOT NULL,
+  total_checked INT NOT NULL DEFAULT 0,
+  mismatch_count INT NOT NULL DEFAULT 0,
+  fixed_count INT NOT NULL DEFAULT 0,
+  chain_ready TINYINT NOT NULL DEFAULT 0,
+  detail_json CLOB,
+  create_time TIMESTAMP DEFAULT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_reconcile_run_time ON chain_reconcile_log(run_time);

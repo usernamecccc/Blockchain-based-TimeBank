@@ -67,6 +67,7 @@
 
 <script>
 import request from '@/utils/request';
+import { resolveAvatarUrl } from '@/utils/imageUrl';
 
 export default {
   data() {
@@ -88,10 +89,7 @@ export default {
   },
   computed: {
     avatarSrc() {
-      const img = this.userInfo.image;
-      if (!img) return '';
-      if (img.startsWith('http')) return img;
-      return `http://localhost:8080/image/${img}`;
+      return resolveAvatarUrl(this.userInfo.image);
     },
     coinBalanceDisplay() {
       if (this.loading) return '…';

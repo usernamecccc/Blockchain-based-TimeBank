@@ -11,6 +11,9 @@
             每人答谢 <strong>{{ volunteerRewardNumber }}</strong> 时间币
           </div>
         </div>
+        <div class="sign-status-row">
+          <el-tag size="small" :type="signStatusTag.type">{{ signStatusTag.label }}</el-tag>
+        </div>
         <el-divider content-position="center">报名截止</el-divider>
         <div v-if="deadline" style="width: 100%; display: inline-block; margin-bottom: 10px;">
             <el-statistic
@@ -99,6 +102,7 @@ export default {
             currentPage: 1,
             deadline:'',
             isEndSign:false,
+            volJoinInfo: {},
             // 日期表
             pickerOptionsofsearch: {
                 disabledDate(time) {
@@ -158,9 +162,11 @@ export default {
         };
     },
     created() {
-        // 从查询参数中获取数据
         this.id = parseInt(this.$route.query.id);
         this.search();
+        this.getIsEndSign();
+    },
+    activated() {
         this.getIsEndSign();
     },
     computed: {
@@ -175,6 +181,25 @@ export default {
         },
         volunteerRewardShortLabel() {
             return `${this.volunteerRewardNumber} 时间币`;
+        },
+        isServiceCompleted() {
+            const info = this.volJoinInfo || {};
+            return Number(info.status) === 1 || Number(info.rewardPaid) === 1;
+        },
+        signStatusTag() {
+            if (this.isServiceCompleted) {
+                return { label: '已完成', type: 'success' };
+            }
+            if (this.isEndSign) {
+                return { label: '已签到', type: 'success' };
+            }
+            if (this.isSignIn) {
+                return { label: '待签到', type: 'primary' };
+            }
+            if (this.isActivityEnd) {
+                return { label: '已结束', type: 'info' };
+            }
+            return { label: '已报名', type: 'success' };
         },
         isSignUp() {
             // 获取当前时间
@@ -281,13 +306,11 @@ export default {
             // 发起请求时将查询字符串添加到URL中
             request.get(`users/vol/sign?${queryString}`).then(response => {
                 if (response.code === 1) {
-                    if (response.data.sign === 1) {
-                        // 在这里处理获取到的结果
-                        this.isEndSign = true;
-                        console.log('已签到');
-                    }
+                    this.volJoinInfo = response.data || {};
+                    this.isEndSign = Number(response.data.sign) === 1;
                 } else {
-                    this.$message.error(response.msg);
+                    this.volJoinInfo = {};
+                    this.isEndSign = false;
                 }
             }).catch(error => {
                 console.error('获取数据失败:', error);
@@ -320,12 +343,13 @@ export default {
                 });
         },
         signInUser() {
-            // 在发送路由跳转时将数据作为查询参数传递
-            this.$router.push({ 
-                name: 'SignInUser', 
-                query: { 
-                    id: this.id
-                } 
+            this.$router.push({
+                name: 'SignInUser',
+                query: {
+                    id: this.id,
+                    title: this.form.title || '',
+                    address: this.form.address || '',
+                },
             });
         },
     }
@@ -393,6 +417,13 @@ export default {
 
   .reward-banner--zero .reward-banner-main i {
     color: #909399;
+  }
+
+  .sign-status-row {
+    width: 100%;
+    margin-top: 10px;
+    display: flex;
+    justify-content: center;
   }
 }
 </style>
