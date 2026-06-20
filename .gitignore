@@ -2,3 +2,25 @@
 *.lock
 *.jar
 *.lst
+
+# Geth local private chain data
+/geth-local/
+/geth-local.log
+/geth-local.err.log
+
+# Local/private-chain deployment outputs
+/deployments/gethLocal/
+/deployments/localhost/
+
+# Accidental address/temp files generated during local deployment
+/0x*
+
+# Local contract address cache
+/geth-contract-address.txt
+/TimeCoinSystem/geth-local
+TimeCoinSystem/0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0
+/TimeCoinSystem/deployments/gethLocal
+TimeCoinSystem/geth-local.err.log
+TimeCoinSystem/geth-local.log
+/TimeCoinSystem/deployments/localhost
+
