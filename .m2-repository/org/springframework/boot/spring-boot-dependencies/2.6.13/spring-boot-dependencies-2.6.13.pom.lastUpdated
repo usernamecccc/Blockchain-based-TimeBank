@@ -1,0 +1,6 @@
+#NOTE: This is a Maven Resolver internal implementation file, its format can be changed without prior notice.
+#Sat Jun 20 17:17:18 CST 2026
+@default-aliyunmaven-https\://maven.aliyun.com/repository/public/.lastUpdated=1781947038608
+https\://maven.aliyun.com/repository/public/.error=Could not transfer artifact org.springframework.boot\:spring-boot-dependencies\:pom\:2.6.13 from/to aliyunmaven (https\://maven.aliyun.com/repository/public)\: Permission denied\: connect
+@default-osgeo-https\://repo.osgeo.org/repository/release/.lastUpdated=1781947038778
+https\://repo.osgeo.org/repository/release/.error=Could not transfer artifact org.springframework.boot\:spring-boot-dependencies\:pom\:2.6.13 from/to osgeo (https\://repo.osgeo.org/repository/release/)\: Permission denied\: connect

@@ -1,6 +1,10 @@
 node_modules
 .env
 .encryptedKey.json
+geth-local/data/
+geth-local/genesis.json
+geth-local/password.txt
+geth-local/private-key.txt
 
 # Hardhat files
 /cache

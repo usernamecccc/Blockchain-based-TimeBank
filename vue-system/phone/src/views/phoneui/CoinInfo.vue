@@ -91,7 +91,7 @@ export default {
       const img = this.userInfo.image;
       if (!img) return '';
       if (img.startsWith('http')) return img;
-      return `http://localhost:8080/image/${img}`;
+      return `${request.defaults.baseURL}/image/${img}`;
     },
     coinBalanceDisplay() {
       if (this.loading) return '…';
