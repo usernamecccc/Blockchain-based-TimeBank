@@ -16,7 +16,12 @@
                     </div>
                 </span>
             </div>
-            <div style="color: white">{{ roleLabel }}：{{ userInfo.username }}</div>
+            <div style="color: white">
+              {{ roleLabel }}：{{ userInfo.username }}
+              <span v-if="userInfo.id != null && userInfo.id !== ''" style="opacity: 0.92; margin-left: 6px;">
+                （ID {{ userInfo.id }}）
+              </span>
+            </div>
             <i class="el-icon-arrow-down el-icon--right"></i>
           </span>
           <el-dropdown-menu slot="dropdown">
@@ -56,10 +61,22 @@
               <span v-if="!isCollapse" slot="title">活动管理</span> 
             </el-menu-item>
           </router-link>
+          <router-link to="/noticeManageView" class="RouterLink">
+            <el-menu-item index="3a">
+              <i class="el-icon-bell"></i>
+              <span v-if="!isCollapse" slot="title">公告管理</span>
+            </el-menu-item>
+          </router-link>
           <router-link to="/coinView" class="RouterLink">
             <el-menu-item index="4">
               <i class="el-icon-coin"></i>
               <span v-if="!isCollapse" slot="title">时间币管理</span> 
+            </el-menu-item>
+          </router-link>
+          <router-link to="/compensationView" class="RouterLink">
+            <el-menu-item index="4a">
+              <i class="el-icon-refresh-left"></i>
+              <span v-if="!isCollapse" slot="title">待追讨记录</span>
             </el-menu-item>
           </router-link>
           <router-link to="/systemView" class="RouterLink">
@@ -68,36 +85,6 @@
               <span v-if="!isCollapse" slot="title">系统管理</span> 
             </el-menu-item>
           </router-link>
-          <el-menu-item index="6">
-            <i class="el-icon-pie-chart"></i>
-            <span v-if="!isCollapse" slot="title">服务管理</span> 
-          </el-menu-item>
-          <el-menu-item index="7">
-            <i class="el-icon-chat-line-round"></i>
-            <span v-if="!isCollapse" slot="title">人工服务</span> 
-          </el-menu-item>
-          <el-menu-item index="8">
-            <i class="el-icon-lock"></i>
-            <span v-if="!isCollapse" slot="title">权限管理</span> 
-          </el-menu-item>
-          <el-submenu index="9">
-            <template slot="title">
-              <i class="el-icon-video-camera"></i>
-              <span slot="title">系统监控</span>
-            </template>
-            <el-menu-item index="9-1">在线用户</el-menu-item>
-            <el-menu-item index="9-2">服务监控</el-menu-item>
-            <el-menu-item index="9-3">缓存监控</el-menu-item>
-            <el-menu-item index="9-4">数据监控</el-menu-item>
-          </el-submenu>
-          <el-menu-item index="10">
-            <i class="el-icon-data-analysis"></i>
-            <span v-if="!isCollapse" slot="title">统计</span> 
-          </el-menu-item>
-          <el-menu-item index="11">
-            <i class="el-icon-setting"></i>
-            <span v-if="!isCollapse" slot="title">设置</span> 
-          </el-menu-item>
         </el-menu>
       </el-aside>
       <el-container class="right">
@@ -184,6 +171,10 @@ export default {
             return '系统管理';
           case '/coinView':
             return '时间币管理';
+          case '/compensationView':
+            return '待追讨记录';
+          case '/noticeManageView':
+            return '公告管理';
           default:
             return path; // 默认返回路由路径
         }

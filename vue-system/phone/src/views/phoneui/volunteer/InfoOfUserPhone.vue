@@ -19,19 +19,12 @@
                     <div>
                         {{infoData.username}}
                     </div>
-                    <el-row :gutter="20" style="display: flex;
-                    justify-content: space-between;
-                    align-items: center;">
-                        <div>
-                            <el-statistic title="时间币总数">
-                            <template slot="formatter">
-                                8
-                            </template>
-                            </el-statistic>
-                        </div>
-                    </el-row>
+                    <div class="user-id-text">用户 ID：{{ infoData.id != null && infoData.id !== '' ? infoData.id : '—' }}</div>
+                    <div class="coin-total-row">
+                        <span class="coin-total-label">时间币总数</span>
+                        <span class="coin-total-value">{{ coinBalanceDisplay }}</span>
+                    </div>
                 </div>
-                <img :src="require('@/assets/common/integral1.jpg')" class="image">
             </div>
             <div class="contentBox">
                 <el-menu style="width: 100%;">
@@ -74,10 +67,21 @@ export default {
         return{
             infoData: {},
             squareUrl: '',
+            coinBalance: null,
+            coinBalanceLoading: true,
+            coinChainReady: true,
         }
+    },
+    computed: {
+        coinBalanceDisplay() {
+            if (this.coinBalanceLoading) return '…';
+            if (this.coinBalance === null || this.coinBalance === undefined) return '—';
+            return this.coinBalance;
+        },
     },
     created() {
         this.search();
+        this.fetchCoinBalance();
     },
     methods: {
         redirectToInfo() {
@@ -99,6 +103,27 @@ export default {
         },
         queryActivity() {
             this.$router.push('activityOfUser');
+        },
+        fetchCoinBalance() {
+            this.coinBalanceLoading = true;
+            request.get('/info/coinBalance')
+                .then(response => {
+                    if (response.code === 1 && response.data) {
+                        this.coinBalance = response.data.balance != null ? String(response.data.balance) : '0';
+                        this.coinChainReady = response.data.chainReady !== false;
+                        if (!this.coinChainReady && response.data.reason) {
+                            console.warn('链未就绪:', response.data.reason);
+                        }
+                    } else {
+                        this.coinBalance = '—';
+                    }
+                })
+                .catch(() => {
+                    this.coinBalance = '—';
+                })
+                .finally(() => {
+                    this.coinBalanceLoading = false;
+                });
         },
     }
 }
@@ -132,7 +157,7 @@ export default {
                 justify-content: center;
                 align-items: center;
                 flex-shrink: 0; /* 防止底部内容被压缩 */
-                margin-right: 40px;
+                margin-right: 0;
                 .avatar1 {
                     display: inline-block;
                     width: 60px;
@@ -153,10 +178,33 @@ export default {
                     color: #fff;
                     margin-right: 4px;
                 }
-            }
-            .image {
-                width: 100px;
-                height: auto;
+                .user-id-text {
+                    margin-top: 4px;
+                    font-size: 13px;
+                    color: #909399;
+                }
+                .coin-total-row {
+                    display: flex;
+                    flex-direction: row;
+                    align-items: baseline;
+                    justify-content: center;
+                    gap: 10px;
+                    margin-top: 10px;
+                    width: 100%;
+                    flex-wrap: nowrap;
+                }
+                .coin-total-label {
+                    font-size: 14px;
+                    color: #606266;
+                    white-space: nowrap;
+                }
+                .coin-total-value {
+                    font-size: 22px;
+                    font-weight: 700;
+                    color: var(--vol-primary-strong);
+                    line-height: 1;
+                    letter-spacing: 0.02em;
+                }
             }
         }
         .contentBox{

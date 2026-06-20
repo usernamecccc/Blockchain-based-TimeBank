@@ -47,14 +47,61 @@ CREATE TABLE IF NOT EXISTS activity (
   old_id INT NOT NULL,
   phone VARCHAR(32) DEFAULT NULL,
   description TEXT,
+  -- status: 1待审核 2审核通过 3进行中 4拒绝 5活动过期
   status SMALLINT NOT NULL DEFAULT 1,
   administrator_id INT NOT NULL,
   create_time DATETIME DEFAULT NULL,
   update_time DATETIME DEFAULT NULL,
   message VARCHAR(512) DEFAULT NULL,
+  service_type VARCHAR(64) NOT NULL DEFAULT 'other_service',
+  extra_json JSON NULL,
   remain SMALLINT NOT NULL DEFAULT 0,
+  volunteer_reward INT NOT NULL DEFAULT 0,
   CONSTRAINT fk_act_old FOREIGN KEY (old_id) REFERENCES old(id),
   CONSTRAINT fk_act_admi FOREIGN KEY (administrator_id) REFERENCES administrator(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 历史库迁移：若 activity 已存在且缺少新列，补齐后即可支持动态服务类型
+SET @ddl := (
+  SELECT IF(
+    EXISTS(
+      SELECT 1
+      FROM information_schema.COLUMNS
+      WHERE TABLE_SCHEMA = DATABASE()
+        AND TABLE_NAME = 'activity'
+        AND COLUMN_NAME = 'service_type'
+    ),
+    'SELECT 1',
+    'ALTER TABLE activity ADD COLUMN service_type VARCHAR(64) NOT NULL DEFAULT ''other_service'''
+  )
+);
+PREPARE stmt FROM @ddl;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @ddl := (
+  SELECT IF(
+    EXISTS(
+      SELECT 1
+      FROM information_schema.COLUMNS
+      WHERE TABLE_SCHEMA = DATABASE()
+        AND TABLE_NAME = 'activity'
+        AND COLUMN_NAME = 'extra_json'
+    ),
+    'SELECT 1',
+    'ALTER TABLE activity ADD COLUMN extra_json JSON NULL'
+  )
+);
+PREPARE stmt FROM @ddl;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+CREATE TABLE IF NOT EXISTS notice (
+  id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  title VARCHAR(255) NOT NULL DEFAULT '',
+  content TEXT NOT NULL,
+  create_time DATETIME DEFAULT NULL,
+  INDEX idx_notice_create_time (create_time)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS activity_volunteer (
@@ -63,11 +110,24 @@ CREATE TABLE IF NOT EXISTS activity_volunteer (
   volunteer_id INT NOT NULL,
   status SMALLINT DEFAULT NULL,
   sign SMALLINT DEFAULT NULL,
+  reward_paid SMALLINT NOT NULL DEFAULT 0,
   create_time DATETIME DEFAULT NULL,
   update_time DATETIME DEFAULT NULL,
   UNIQUE KEY uk_act_vol (activity_id, volunteer_id),
   CONSTRAINT fk_av_act FOREIGN KEY (activity_id) REFERENCES activity(id) ON DELETE CASCADE,
   CONSTRAINT fk_av_vol FOREIGN KEY (volunteer_id) REFERENCES volunteer(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS compensation_record (
+  id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  activity_id INT NOT NULL,
+  volunteer_table_id INT NOT NULL,
+  elder_user_id INT NOT NULL,
+  amount INT NOT NULL,
+  status SMALLINT NOT NULL DEFAULT 0 COMMENT '0 待追讨 / 1 已追讨 / 2 平台核销',
+  create_time DATETIME DEFAULT NULL,
+  update_time DATETIME DEFAULT NULL,
+  INDEX idx_compensation_status (status)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 INSERT INTO `user` (username, name, password, role, email, age, phone, create_time, update_time)

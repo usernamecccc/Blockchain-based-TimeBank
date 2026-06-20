@@ -15,9 +15,9 @@ public class Task {
 
     @Scheduled(fixedRate = 60000)//每隔一分钟执行一次
     public void checkActivityStatus(){
-        log.info("一分钟到了，将更新过期活动");
+        log.info("定时刷新活动状态：过期归档、审核通过→进行中");
 
-        activityService.updateExpired();
+        activityService.refreshActivityLifecycle();
     }
 
 

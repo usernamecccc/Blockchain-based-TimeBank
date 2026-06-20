@@ -1,20 +1,22 @@
 <template>
     <div class="addActivityBox">
         <el-dialog :visible.sync="dialogVisible" title="增添活动">
-            <el-result icon="warning" title="是否确认" subTitle="该活动需要消耗200时间币">
+            <el-result icon="warning" title="是否确认" :subTitle="publishFeeHint">
                 <template slot="extra">
                     <el-button type="primary" size="medium" @click="addActivity">确 定</el-button>
                 </template>
             </el-result>
         </el-dialog>
         <el-header class="header">
-            <el-button type="text" @click="search1" style="margin-left: 50px;">未审核</el-button>
+            <el-button type="text" @click="search1" style="margin-left: 20px;">待审核</el-button>
             <el-divider direction="vertical"></el-divider>
             <el-button type="text" @click="search2">审核通过</el-button>
             <el-divider direction="vertical"></el-divider>
-            <el-button type="text" @click="search3">审核不通过</el-button>
+            <el-button type="text" @click="search3">进行中</el-button>
             <el-divider direction="vertical"></el-divider>
-            <el-button type="text" @click="search4" style="margin-right: 50px;">过期活动</el-button>
+            <el-button type="text" @click="search4">拒绝</el-button>
+            <el-divider direction="vertical"></el-divider>
+            <el-button type="text" @click="search5" style="margin-right: 20px;">已过期</el-button>
         </el-header>
         <el-container class="mainBox">
             <el-header style="display: flex;justify-content: space-between;align-items: center;">
@@ -23,24 +25,34 @@
                 <el-button round type="primary" @click="addOpen">增添活动</el-button>
             </el-header>
             <el-main class="activity">
-                <ul class="infinite-list" v-infinite-scroll="load" infinite-scroll-disabled="busy" infinite-scroll-distance="5" style="overflow:auto;padding-inline-start:0px">
+                <ul class="infinite-list" v-infinite-scroll="load" infinite-scroll-disabled="busy"
+                    infinite-scroll-distance="5" style="overflow:auto;padding-inline-start:0px">
                     <div v-for="(row, index) in tableData" :key="index" @click="handleCardClick(row)">
                         <el-card :body-style="{ padding: '0px' }" shadow="always">
                             <div class="cardContent">
                                 <img :src="$activityImagePath" class="image">
                                 <div class="contentBox">
-                                    <div style="font-size: 17px;">{{ row.title }}</div>
+                                    <div style="font-size: 17px;">
+                                        {{ row.title }}
+                                        <el-tag size="mini" type="info" style="margin-left: 6px;">
+                                            {{ formatServiceTypeLabel(row.serviceType) }}
+                                        </el-tag>
+                                    </div>
                                     <div style="font-size: 14px;">剩余名额：{{ row.remain }}</div>
-                                    <el-progress :percentage="Number(((parseFloat(row.quota) - parseFloat(row.remain)) / parseFloat(row.quota) * 100).toFixed(1))"></el-progress>
-                                    <div style="display: flex;justify-content: space-between;align-items: center;font-size: 12px;">
+                                    <el-progress
+                                        :percentage="Number(((parseFloat(row.quota) - parseFloat(row.remain)) / parseFloat(row.quota) * 100).toFixed(1))"></el-progress>
+                                    <div
+                                        style="display: flex;justify-content: space-between;align-items: center;font-size: 12px;">
                                         {{ formatActivityDates(row) }}
-                                    <el-tag size="mini" v-if="!isBeforeDeadline(row.deadline)" type="danger">报名结束</el-tag>
-                                    <el-tag size="mini" v-else type="success">报名中</el-tag>
+                                        <el-tag size="mini" v-if="!isBeforeDeadline(row.deadline)"
+                                            type="danger">报名结束</el-tag>
+                                        <el-tag size="mini" v-else type="success">报名中</el-tag>
                                     </div>
                                     <div style="font-size: 12px;">{{ row.address }}</div>
                                     <!-- 删除按钮 -->
                                     <div style="display: flex;justify-content: center;align-items: center;">
-                                        <el-button type="danger" round size="mini" @click="deleteActivity(row.id)" style="margin-top: 5px;width: 80%;">删除</el-button>
+                                        <el-button type="danger" round size="mini" @click="deleteActivity(row.id)"
+                                            style="margin-top: 5px;width: 80%;">删除</el-button>
                                     </div>
                                 </div>
                             </div>
@@ -68,16 +80,48 @@ export default {
             currentPage: 1, // 当前页码
             tableData: [], // 表格数据
             searchTitle: '', // 搜索文本
-            status: 2, // 状态,默认为审核通过
+            status: 2, // 筛选用 status（接口若未接筛选则仅前端预留）
+            publishFeeHint: '加载规则中…',
             // 无限滚动
             busy: false,
         }
     },
     mounted() {
+        this.fetchPublishFee();
         // 初始化时计算当前页的数据
         this.search();
     },
     methods: {
+        formatServiceTypeLabel(serviceType) {
+            const map = {
+                medical_rehab: '医疗康复',
+                health_manage: '健康管理',
+                cleaning: '清洁整理',
+                shopping_companion: '购物陪同',
+                clinic_companion: '问诊陪护',
+                purchase: '物品代购',
+                other_service: '其他服务',
+            };
+            if (!serviceType) return map.other_service;
+            return map[serviceType] || map.other_service;
+        },
+        fetchPublishFee() {
+            request.get('/info/publishActivityFee')
+                .then(res => {
+                    if (res.code === 1 && res.data) {
+                        if (res.data.deductEnabled) {
+                            this.publishFeeHint = `确认后将进入填写流程；发布成功时链上将扣除 ${res.data.cost} 时间币`;
+                        } else {
+                            this.publishFeeHint = '确认后将进入填写流程（当前未启用链上扣费）';
+                        }
+                    } else {
+                        this.publishFeeHint = '确认后将进入填写流程';
+                    }
+                })
+                .catch(() => {
+                    this.publishFeeHint = '确认后将进入填写流程';
+                });
+        },
         formatActivityDates(activity) {
             const message = activity && activity.message ? String(activity.message) : '';
             if (message) {
@@ -99,7 +143,7 @@ export default {
         },
         load() {
             if (this.tableData.length >= this.totalItems) {
-                
+
                 return;
             }
             if (this.busy) return;
@@ -121,8 +165,8 @@ export default {
                 // 添加搜索条件到 URLSearchParams 对象中
                 params.append('pageSize', this.pageSize);
                 params.append('page', this.currentPage);
-                params.append('status',this.status);
-                params.append('title',this.searchTitle);
+                params.append('status', this.status);
+                params.append('title', this.searchTitle);
                 // 将 URLSearchParams 对象转换为查询字符串
                 const queryString = params.toString();
                 // 发起请求时将查询字符串添加到URL中
@@ -151,30 +195,30 @@ export default {
             ids.push(id);
             request.delete(`/users/old/${ids.join(',')}`)
                 .then(response => {
-                if(response.code === 1){
-                    this.$message.success(response.msg);
-                    this.search();
-                }
-                else{
-                    this.$message.error(response.msg);
-                }
+                    if (response.code === 1) {
+                        this.$message.success(response.msg);
+                        this.search();
+                    }
+                    else {
+                        this.$message.error(response.msg);
+                    }
                 })
                 .catch(error => {
                     console.error('There was a problem with the request:', error);
                 });
         },
         addActivity() {
-            this.$router.push({ 
+            this.$router.push({
                 name: 'GetInfoActivity',
             });
         },
         handleCardClick(row) {
             // 在发送路由跳转时将数据作为查询参数传递
-            this.$router.push({ 
-                name: 'IdActivityOld', 
-                query: { 
+            this.$router.push({
+                name: 'IdActivityOld',
+                query: {
                     id: row.id
-                } 
+                }
             });
         },
         // 判断是否在报名截止日期之前
@@ -202,13 +246,17 @@ export default {
             this.status = 4;
             this.search();
         },
+        search5() {
+            this.status = 5;
+            this.search();
+        },
     }
 }
 </script>
 
 <style lang="scss" scoped>
 .addActivityBox {
-    .header{
+    .header {
         display: flex;
         justify-content: space-between;
         align-items: center;
@@ -216,39 +264,108 @@ export default {
         padding: 0px;
         margin: 5px;
     }
-    .mainBox{
-        .activity{
-          display: flex;
-          flex-direction: column;
-          justify-content: center; /* 水平居中 */
-          align-items: center; /* 垂直居中 */
-          padding: 0px;
-          .el-card{
+
+    .mainBox {
+        .activity {
             display: flex;
-            padding: 8px;
-            margin-left: 10px;
-            margin-right: 10px;
-            height: 140px;
+            flex-direction: column;
+            justify-content: center;
+            /* 水平居中 */
             align-items: center;
-            margin-bottom: 15px;
-            .cardContent{
-              display: flex;
-              justify-content: space-between;
-              align-items: center;
-              .image {
-                width: 40%;
-                display: block;
-                border-radius: 10px;
-                box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
-              }
-              .contentBox {
+            /* 垂直居中 */
+            padding: 0px;
+
+            .el-card {
+                display: flex;
                 padding: 8px;
-                width: 60%;
-              }
+                margin-left: 10px;
+                margin-right: 10px;
+                height: 140px;
+                align-items: center;
+                margin-bottom: 15px;
+
+                .cardContent {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+
+                    .image {
+                        width: 40%;
+                        display: block;
+                        border-radius: 10px;
+                        box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+                    }
+
+                    .contentBox {
+                        padding: 8px;
+                        width: 60%;
+                    }
+                }
+
             }
-            
-          } 
         }
     }
+}
+
+.addActivityBox {
+    min-height: calc(100vh - 130px);
+    background: var(--old-bg);
+    color: var(--old-text);
+    padding-bottom: 14px;
+}
+
+.addActivityBox .header {
+    height: auto !important;
+    min-height: 56px;
+    overflow-x: auto;
+    border: 1px solid var(--old-border) !important;
+    border-radius: 14px;
+    margin: 8px 10px 12px !important;
+    background: var(--old-surface);
+}
+
+.addActivityBox .header ::v-deep .el-button {
+    min-height: 44px;
+    padding: 0 8px;
+    color: var(--old-primary);
+    font-size: 15px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.addActivityBox .mainBox ::v-deep .el-header {
+    height: auto !important;
+    min-height: 60px;
+    padding: 8px 10px;
+    gap: 8px;
+}
+
+.addActivityBox .mainBox ::v-deep .el-input__inner {
+    min-height: 46px;
+    border-color: var(--old-border);
+    border-radius: 10px;
+    font-size: 16px;
+}
+
+.addActivityBox .mainBox ::v-deep .el-button {
+    min-height: 46px;
+    font-size: 15px;
+    font-weight: 700;
+}
+
+.addActivityBox .mainBox ::v-deep .el-button--primary {
+    background: var(--old-primary);
+    border-color: var(--old-primary);
+}
+
+.addActivityBox .mainBox .activity .el-card {
+    border: 1px solid var(--old-border);
+    border-radius: 14px;
+    background: var(--old-surface);
+    box-shadow: 0 5px 16px rgba(111, 76, 43, 0.10);
+}
+
+.addActivityBox .mainBox .activity .contentBox {
+    color: var(--old-text);
 }
 </style>

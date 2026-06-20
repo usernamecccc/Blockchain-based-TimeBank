@@ -4,7 +4,9 @@ import io.jsonwebtoken.Claims;
 import lombok.extern.slf4j.Slf4j;
 import org.example.pojo.Result;
 import org.example.pojo.User;
+import org.example.timecoinweb.config.BlockchainProperties;
 import org.example.timecoinweb.service.RegisterService;
+import org.example.timecoinweb.service.TimeCoinChainService;
 import org.example.timecoinweb.service.UserService;
 import org.example.utils.AliOSSUtils;
 import org.example.utils.JwtUtils;
@@ -14,6 +16,9 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.File;
 import java.io.IOException;
+import java.math.BigInteger;
+import java.util.HashMap;
+import java.util.Map;
 
 //用于显示当前用户自己的信息
 
@@ -27,6 +32,62 @@ public class SelfController {
     private AliOSSUtils aliOSSUtils;
     @Autowired
     private UserService userService;
+    @Autowired
+    private TimeCoinChainService timeCoinChainService;
+    @Autowired
+    private BlockchainProperties blockchainProperties;
+
+    /**
+     * 老人发布活动在链上的扣费数量（供移动端确认提示；与 {@code blockchain.old-publish-activity-cost} 一致）。
+     */
+    @GetMapping("/publishActivityFee")
+    public Result publishActivityFee() {
+        BigInteger cost = blockchainProperties.getOldPublishActivityCost();
+        if (cost == null) {
+            cost = BigInteger.ZERO;
+        }
+        boolean deduct =
+                blockchainProperties.isEnabled()
+                        && timeCoinChainService.isChainReady()
+                        && cost.signum() > 0;
+        BigInteger vmax = blockchainProperties.getVolunteerRewardMax();
+        boolean rewardCapped = vmax != null && vmax.signum() > 0;
+        Map<String, Object> body = new HashMap<>();
+        body.put("cost", cost.toString());
+        body.put("deductEnabled", deduct);
+        body.put("feeRecipientUserId", blockchainProperties.getFeeRecipientUserId());
+        body.put("volunteerRewardMax", rewardCapped ? vmax.toString() : null);
+        body.put("volunteerRewardMaxCapped", rewardCapped);
+        return Result.success(body);
+    }
+
+    /**
+     * 当前登录用户在链上的时间币余额（userId = 用户表主键字符串）。
+     * 路径含 info，{@link org.example.timecoinweb.interceptor.LoginCheckInterceptor} 对所有已登录角色放行。
+     */
+    @GetMapping("/coinBalance")
+    public Result coinBalance(@RequestHeader("token") String token) {
+        Claims claims = JwtUtils.parseJWT(token);
+        Integer id = (Integer) claims.get("id");
+        String userId = String.valueOf(id);
+        Map<String, Object> body = new HashMap<>();
+        body.put("userId", userId);
+        if (!timeCoinChainService.isChainReady()) {
+            body.put("balance", "0");
+            body.put("chainReady", Boolean.FALSE);
+            body.put("reason", timeCoinChainService.getNotReadyReason());
+            return Result.success(body);
+        }
+        try {
+            BigInteger bal = timeCoinChainService.balanceOf(userId);
+            body.put("balance", bal.toString());
+            body.put("chainReady", Boolean.TRUE);
+            return Result.success(body);
+        } catch (Exception e) {
+            log.warn("coinBalance 查询失败 userId={}", userId, e);
+            return Result.error(e.getMessage());
+        }
+    }
 
     /**
      * 查询用户个人信息

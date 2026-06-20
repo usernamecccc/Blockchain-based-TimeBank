@@ -6,6 +6,11 @@
         </el-header>
         <el-container class="mainBox">
             <el-header class="groupBox">
+                <div class="status-tabs">
+                    <el-button type="text" class="status-tab" :class="{ active: activeTab === 'available' }" @click="search1">可报名</el-button>
+                    <el-button type="text" class="status-tab" :class="{ active: activeTab === 'joined' }" @click="search2">已报名</el-button>
+                    <el-button type="text" class="status-tab" :class="{ active: activeTab === 'ended' }" @click="search3">已结束</el-button>
+                </div>
                 <el-button type="text" @click="search1">可报名</el-button>
                 <el-divider direction="vertical"></el-divider>
                 <el-button type="text" @click="search2">已报名</el-button>
@@ -20,7 +25,13 @@
                             <img :src="$activityImagePath" class="image">
                             <div class="contentBox">
                             <div style="font-size: 17px;">{{ row.title }}</div>
-                            <div style="font-size: 14px;">剩余名额：{{ row.quota }}</div>
+                            <div style="font-size: 14px;">剩余名额：{{ row.remain }}</div>
+                            <div
+                              class="volunteer-reward-line"
+                              :class="{ 'volunteer-reward-line--zero': formatVolunteerRewardAmount(row) <= 0 }"
+                            >
+                              答谢（每人）：{{ formatVolunteerRewardAmount(row) }} 时间币
+                            </div>
                             <el-progress :percentage="Number(((parseFloat(row.quota) - parseFloat(row.remain)) / parseFloat(row.quota) * 100).toFixed(1))"></el-progress>
                             <div style="display: flex;justify-content: space-between;align-items: center;font-size: 12px;">
                                 {{ formatActivityDates(row) }}
@@ -96,6 +107,11 @@ export default {
             const day = String(activity.date).split('-').pop();
             return `${parseInt(day, 10)}号`;
         },
+        formatVolunteerRewardAmount(row) {
+            const v = row && row.volunteerReward;
+            const n = v === null || v === undefined || v === '' ? 0 : Number(v);
+            return Number.isFinite(n) ? n : 0;
+        },
         load() {
             if (this.originalData.length >= this.totalItems) {
                 
@@ -154,7 +170,9 @@ export default {
                 if (this.activeTab === 'available') {
                     // 解析失败时按“可报名”保留，避免整页被误过滤为空
                     if (!deadline) return true;
-                    return deadline > now;
+                    const remain = Number(row.remain);
+                    const hasQuota = Number.isFinite(remain) ? remain > 0 : true;
+                    return deadline > now && hasQuota;
                 }
                 if (this.activeTab === 'joined') {
                     if (!activityEnd) return true;
@@ -221,6 +239,33 @@ export default {
           display: flex;
           align-items: center;
           margin-left: 10px;
+
+          > .el-button,
+          > .el-divider {
+            display: none;
+          }
+
+          .status-tabs {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+          }
+
+          .status-tab {
+            min-width: 72px;
+            height: 32px;
+            padding: 0 12px;
+            border: 1px solid transparent;
+            border-radius: 16px;
+            box-sizing: border-box;
+            font-weight: 600;
+          }
+
+          .status-tab.active {
+            color: var(--vol-primary);
+            border-color: var(--vol-primary);
+            background: #ffffff;
+          }
         }
         .activity{
           display: flex;
@@ -231,7 +276,7 @@ export default {
           .el-card{
             display: flex;
             padding: 5px;
-            height: 140px;
+            min-height: 156px;
             align-items: center;
             margin-bottom: 15px;
             .cardContent{
@@ -247,6 +292,16 @@ export default {
               .contentBox {
                 padding: 8px;
                 width: 60%;
+                .volunteer-reward-line {
+                  font-size: 13px;
+                  margin-top: 4px;
+                  color: #67c23a;
+                  font-weight: 500;
+                }
+                .volunteer-reward-line--zero {
+                  color: #909399;
+                  font-weight: 400;
+                }
               }
             }
             

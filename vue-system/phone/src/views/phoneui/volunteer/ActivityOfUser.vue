@@ -15,12 +15,19 @@
                             <img :src="$activityImagePath" class="image">
                             <div class="contentBox">
                                 <div>活动：{{ row.title }}</div>
-                                <div>剩余名额：{{ row.quota }}</div>
+                                <div>剩余名额：{{ row.remain }}</div>
                                 <el-progress :percentage="Number(((parseFloat(row.quota) - parseFloat(row.remain)) / parseFloat(row.quota) * 100).toFixed(1))"></el-progress>
                                 <div style="display: flex;justify-content: space-between;align-items: center;">
                                 活动日期：{{ formatActivityDates(row) }}
                                 <el-tag size="mini" v-if="!isBeforeDeadline(row.deadline)" type="danger">报名结束</el-tag>
                                 <el-tag size="mini" v-else type="success">报名中</el-tag>
+                                </div>
+                                <div
+                                  class="volunteer-reward-line"
+                                  :class="{ 'volunteer-reward-line--zero': formatVolunteerRewardAmount(row) <= 0 }"
+                                  style="margin-top: 4px;"
+                                >
+                                  答谢（每人）：{{ formatVolunteerRewardAmount(row) }} 时间币
                                 </div>
                                 <div style="font-size: 12px;">地址：{{ row.address }}</div>
                             </div>
@@ -38,7 +45,7 @@
         <el-footer class="operations">
             <span>
             <router-link to="/homePhone" class="RouterLink">
-                <i class="el-icon-house"></i>用户管理
+                <i class="el-icon-house"></i>首页
             </router-link>
             </span>
             <span>
@@ -98,6 +105,11 @@ export default {
             if (!activity || !activity.date) return '日期待定';
             const day = String(activity.date).split('-').pop();
             return `${parseInt(day, 10)}号`;
+        },
+        formatVolunteerRewardAmount(row) {
+            const v = row && row.volunteerReward;
+            const n = v === null || v === undefined || v === '' ? 0 : Number(v);
+            return Number.isFinite(n) ? n : 0;
         },
         load() {
             if (this.originalData.length >= this.totalItems) {
@@ -191,6 +203,10 @@ export default {
 
 <style lang="scss" scoped>
 .addActivityBox {
+    min-height: calc(100vh - 48px);
+    padding-bottom: 78px;
+    background: var(--vol-bg);
+
     .header{
         display: flex;
         justify-content: space-between;
@@ -198,6 +214,7 @@ export default {
         border: 1px solid #DCDFE6;
         padding: 0px;
         margin: 5px;
+        background: #ffffff;
     }
     .searchBox{
         margin-top: 5px;
@@ -218,9 +235,10 @@ export default {
             padding: 8px;
             margin-left: 10px;
             margin-right: 10px;
-            height: 140px;
+            min-height: 156px;
             align-items: center;
             margin-bottom: 15px;
+            background: #ffffff;
             .cardContent{
               display: flex;
               justify-content: space-between;
@@ -234,6 +252,16 @@ export default {
               .contentBox {
                 padding: 8px;
                 width: 60%;
+                .volunteer-reward-line {
+                  font-size: 13px;
+                  margin-top: 4px;
+                  color: #67c23a;
+                  font-weight: 500;
+                }
+                .volunteer-reward-line--zero {
+                  color: #909399;
+                  font-weight: 400;
+                }
               }
             } 
           }
@@ -245,6 +273,7 @@ export default {
       align-items: center;
       margin-top: 10px;
       backdrop-filter: blur(10px);
+      background: rgba(255, 255, 255, 0.96);
       border-radius: 5px;
       box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
       flex-shrink: 0; /* 防止底部内容被压缩 */

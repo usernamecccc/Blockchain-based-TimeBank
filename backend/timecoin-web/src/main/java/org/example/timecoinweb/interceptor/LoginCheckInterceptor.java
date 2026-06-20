@@ -18,11 +18,12 @@ import javax.servlet.http.HttpServletResponse;
 public class LoginCheckInterceptor implements HandlerInterceptor {
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response,Object handler) throws Exception{
-        //解决跨域
-        response.setHeader("Access-Control-Allow-Origin", "*");
-        response.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE");
-        response.setHeader("Access-Control-Allow-Headers", "*");
-        response.setHeader("Access-Control-Allow-Credentials", "true");
+        // CORS 由 WebMvcConfig 统一配置；此处曾使用 * + Allow-Credentials 组合，会导致浏览器预检失败
+
+        // 预检请求无 token，直接放行（由 Cors 配置补全响应头）
+        if ("OPTIONS".equalsIgnoreCase(request.getMethod())) {
+            return true;
+        }
 
         //1.获取url
         String url =request.getRequestURL().toString();

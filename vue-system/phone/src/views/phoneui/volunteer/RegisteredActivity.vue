@@ -5,6 +5,12 @@
         <div>
             {{ form.title }}
         </div>
+        <div class="reward-banner" :class="{ 'reward-banner--zero': volunteerRewardNumber <= 0 }">
+          <div class="reward-banner-main">
+            <i class="el-icon-coin"></i>
+            每人答谢 <strong>{{ volunteerRewardNumber }}</strong> 时间币
+          </div>
+        </div>
         <el-divider content-position="center">报名截止</el-divider>
         <div v-if="deadline" style="width: 100%; display: inline-block; margin-bottom: 10px;">
             <el-statistic
@@ -37,6 +43,9 @@
             </el-form-item>
             <el-form-item label="剩余名额">
                 <el-input v-model="form.remain" readonly prefix-icon="el-icon-sell"></el-input>
+            </el-form-item>
+            <el-form-item label="每人答谢">
+                <el-input :value="volunteerRewardShortLabel" readonly prefix-icon="el-icon-coin"></el-input>
             </el-form-item>
             <el-form-item label="报名截止时间">
                 <div class="block">
@@ -118,10 +127,11 @@ export default {
             },
             // 选择器
             options: [
-                { value: 1, label: '未审核活动' },
-                { value: 2, label: '审核同意活动' },
-                { value: 3, label: '审核不同意活动' },
-                { value: 4, label: '过期活动' },
+                { value: 1, label: '待审核' },
+                { value: 2, label: '审核通过' },
+                { value: 3, label: '进行中' },
+                { value: 4, label: '拒绝进行' },
+                { value: 5, label: '活动过期' },
             ],
             pickerOptionsofform: {
                 shortcuts: [{
@@ -157,6 +167,14 @@ export default {
         statusLabel() {
             const selectedOption = this.options.find(option => option.value === this.form.status);
             return selectedOption ? selectedOption.label : '未知状态';
+        },
+        volunteerRewardNumber() {
+            const v = this.form.volunteerReward;
+            const n = v === null || v === undefined || v === '' ? 0 : Number(v);
+            return Number.isFinite(n) ? n : 0;
+        },
+        volunteerRewardShortLabel() {
+            return `${this.volunteerRewardNumber} 时间币`;
         },
         isSignUp() {
             // 获取当前时间
@@ -245,7 +263,6 @@ export default {
                 const response = await request.get(`users/volold/activity?${queryString}`);
                 if (response.code === 1) {
                     this.form = response.data;
-                    this.$message("已经报名成功，请尽快联系老人");
                     this.calculateDeadline();
                 } else {
                     this.$message.error(response.msg);
@@ -322,6 +339,8 @@ export default {
   flex-direction: column;
   align-items: center;
   padding: 10px;
+  min-height: calc(100vh - 48px);
+  background: var(--vol-bg);
   .image {
     width: 95%;
     height: auto;
@@ -329,6 +348,7 @@ export default {
   .content{
     margin: 10px;
     backdrop-filter: blur(10px);
+    background: #ffffff;
     border-radius: 10px;
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
     height: auto;
@@ -338,6 +358,41 @@ export default {
     justify-content: center;
     align-items: center;
     padding: 20px;
+  }
+
+  .reward-banner {
+    width: 100%;
+    margin-top: 10px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    border: 1px solid rgba(103, 194, 58, 0.35);
+    background: rgba(103, 194, 58, 0.08);
+    text-align: left;
+    box-sizing: border-box;
+  }
+
+  .reward-banner--zero {
+    border-color: #dcdfe6;
+    background: rgba(144, 147, 153, 0.08);
+  }
+
+  .reward-banner-main {
+    font-size: 15px;
+    color: #303133;
+    line-height: 1.4;
+  }
+
+  .reward-banner-main i {
+    margin-right: 4px;
+    color: #67c23a;
+  }
+
+  .reward-banner--zero .reward-banner-main {
+    color: #606266;
+  }
+
+  .reward-banner--zero .reward-banner-main i {
+    color: #909399;
   }
 }
 </style>

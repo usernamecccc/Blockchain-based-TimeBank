@@ -2,23 +2,41 @@ package org.example.timecoinweb.service.impl;
 
 import com.github.pagehelper.Page;
 import com.github.pagehelper.PageHelper;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.example.pojo.Activity;
 import org.example.pojo.PageBean;
+import org.example.timecoinweb.config.BlockchainProperties;
 import org.example.timecoinweb.mapper.ActivityMapper;
 import org.example.timecoinweb.mapper.AdmiMapper;
+import org.example.timecoinweb.mapper.OldMapper;
 import org.example.timecoinweb.mapper.VolMapper;
 import org.example.timecoinweb.service.ActivityService;
+import org.example.timecoinweb.util.ServiceTypeSupport;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigInteger;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.List;
+import java.util.Map;
 
 @Service
 public class ActivityServiceImpl implements ActivityService {
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+
+    private static Object mapGetIgnoreCase(Map<String, Object> row, String... keyCandidates) {
+        for (String want : keyCandidates) {
+            for (Map.Entry<String, Object> e : row.entrySet()) {
+                if (e.getKey() != null && e.getKey().equalsIgnoreCase(want)) {
+                    return e.getValue();
+                }
+            }
+        }
+        return null;
+    }
 
     @Autowired
     ActivityMapper activityMapper;
@@ -26,6 +44,51 @@ public class ActivityServiceImpl implements ActivityService {
     VolMapper volMapper;
     @Autowired
     AdmiMapper admiMapper;
+    @Autowired
+    OldMapper oldMapper;
+    @Autowired
+    BlockchainProperties blockchainProperties;
+
+    /** 管理员端：答谢上限校验；插入时 null 视作 0。 */
+    private void normalizeVolunteerRewardForAdmin(Activity activity, boolean insert) {
+        Integer r = activity.getVolunteerReward();
+        if (insert && r == null) {
+            activity.setVolunteerReward(0);
+            return;
+        }
+        Integer vObj = activity.getVolunteerReward();
+        if (vObj == null) {
+            return;
+        }
+
+        int v = vObj;
+        if (v < 0) {
+            throw new IllegalArgumentException("答谢时间币不能为负数");
+        }
+        BigInteger max = blockchainProperties.getVolunteerRewardMax();
+        if (max != null && max.signum() > 0 && BigInteger.valueOf(v).compareTo(max) > 0) {
+            throw new IllegalArgumentException("答谢时间币不能超过单次上限 " + max);
+        }
+    }
+
+    /**
+     * 前端「老人ID」通常填 user.id；库中外键 activity.old_id 引用的是 old.id。
+     * 若传入值已是 old 表主键则保持不变；否则按 user_id 查 old.id。
+     */
+    private void resolveOldIdForActivity(Activity activity) {
+        int raw = activity.getOldId();
+        if (oldMapper.selectUserId(raw) != null) {
+            return;
+        }
+        Integer oldPk = oldMapper.selectOldId(raw);
+        if (oldPk != null) {
+            activity.setOldId(oldPk);
+            return;
+        }
+        throw new IllegalStateException(
+                "老人ID无效：请填写已在系统中注册的老人「用户ID」（用户管理中对应用户的 id），"
+                        + "或老人档案表主键 old.id。若尚无老人用户，请先在用户管理中添加角色为老人的账号。");
+    }
 
 
     @Override
@@ -60,7 +123,10 @@ public class ActivityServiceImpl implements ActivityService {
         activity.setAdministratorId(administrator);
 
         activity.setUpdateTime(LocalDateTime.now());
+        ServiceTypeSupport.normalizeForUpdate(activity, OBJECT_MAPPER);
 
+        resolveOldIdForActivity(activity);
+        normalizeVolunteerRewardForAdmin(activity, false);
         activityMapper.update(activity);
     }
 
@@ -74,13 +140,24 @@ public class ActivityServiceImpl implements ActivityService {
         activity.setCreateTime(LocalDateTime.now());
         activity.setUpdateTime(LocalDateTime.now());
         activity.setRemain(activity.getQuota());
+        // 管理员代为发布：直接审核通过（2），不再走待审核）
+        activity.setStatus((short) 2);
+        if (activity.getServiceType() == null || activity.getServiceType().trim().isEmpty()) {
+            activity.setServiceType(ServiceTypeSupport.OTHER_SERVICE);
+        }
+        if (activity.getExtraJson() == null || activity.getExtraJson().trim().isEmpty()) {
+            activity.setExtraJson("{}");
+        }
 
+        resolveOldIdForActivity(activity);
+        normalizeVolunteerRewardForAdmin(activity, true);
         activityMapper.insert(activity);
     }
 
     @Override
-    public void updateExpired() {
-        activityMapper.updateExpired();
+    public void refreshActivityLifecycle() {
+        activityMapper.markActivitiesExpired();
+        activityMapper.promoteApprovedToOngoing();
     }
 
     @Override
@@ -88,5 +165,37 @@ public class ActivityServiceImpl implements ActivityService {
         return activityMapper.selectByActId(id);
     }
 
-
+    @Override
+    public java.util.Map<String, Object> getActivityStats() {
+        List<java.util.Map<String, Object>> statusStats = activityMapper.countActivitiesByStatus();
+        java.util.Map<String, Object> stats = new java.util.HashMap<>();
+        
+        java.util.Map<String, Object> counts = new java.util.HashMap<>();
+        for (java.util.Map<String, Object> statusStat : statusStats) {
+            Object status = mapGetIgnoreCase(statusStat, "act_status", "status");
+            Object count = mapGetIgnoreCase(statusStat, "status_cnt", "count");
+            if (status != null) {
+                String statusKey = "";
+                switch (status.toString()) {
+                    case "1": statusKey = "pending"; break;
+                    case "2": statusKey = "approved"; break;
+                    case "3": statusKey = "ongoing"; break;
+                    case "4": statusKey = "rejected"; break;
+                    case "5": statusKey = "expired"; break;
+                }
+                if (!statusKey.isEmpty()) {
+                    long n = 0;
+                    if (count instanceof Number) {
+                        n = ((Number) count).longValue();
+                    } else if (count != null) {
+                        n = Long.parseLong(count.toString());
+                    }
+                    counts.put(statusKey, n);
+                }
+            }
+        }
+        stats.put("statusDistribution", counts);
+        stats.put("totalEngagement", activityMapper.countTotalEngagement());
+        return stats;
+    }
 }

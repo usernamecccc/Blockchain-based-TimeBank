@@ -13,7 +13,7 @@
             <span class="link-container">
                 <router-link to="/artificialOld" class="RouterLink">
                     <i class="el-icon-s-comment icon"></i>
-                    <div class="text">人工服务</div>
+                    <div class="text">AI服务</div>
                 </router-link>
             </span>
             <span class="link-container" style="margin-right: 35px;">
@@ -58,5 +58,49 @@
             }
         }
     }
+}
+
+.Box {
+    min-height: 100vh;
+    padding-bottom: 82px;
+    background: var(--old-bg);
+}
+
+.Box .el-footer {
+    height: 76px !important;
+    margin-top: 0 !important;
+    padding: 0 12px !important;
+    box-sizing: border-box;
+    background: rgba(255, 255, 255, 0.96);
+    border-top: 1px solid var(--old-border);
+    border-radius: 16px 16px 0 0 !important;
+    box-shadow: 0 -6px 18px rgba(93, 63, 33, 0.14) !important;
+}
+
+.Box .link-container {
+    flex: 1;
+    margin: 0 !important;
+}
+
+.Box .RouterLink {
+    min-height: 60px;
+    color: var(--old-muted);
+    border-radius: 12px;
+}
+
+.Box .RouterLink .text {
+    margin-top: 3px;
+    font-size: 14px !important;
+    font-weight: 700;
+    line-height: 1.25;
+}
+
+.Box .RouterLink .icon {
+    font-size: 27px !important;
+}
+
+.Box .router-link-active {
+    color: var(--old-primary);
+    background: #e8f4f8;
 }
 </style>

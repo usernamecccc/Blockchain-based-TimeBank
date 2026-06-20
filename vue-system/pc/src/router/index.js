@@ -9,6 +9,7 @@ import AddUserView from '../views/elementui/AddUserView.vue'
 import AddActivityView from '@/views/elementui/AddActivityView.vue'
 import SystemView from '@/views/elementui/SystemView.vue'
 import CoinView from '@/views/elementui/CoinView.vue'
+import CompensationView from '@/views/elementui/CompensationView.vue'
 
 import { requireAuth, loginrequireAuth } from '../utils/permission'
 
@@ -74,6 +75,16 @@ const routes = [
         name: 'CoinView',
         component: CoinView,
         
+      },
+      {
+        path: '/noticeManageView',
+        name: 'NoticeManageView',
+        component: () => import('@/views/elementui/NoticeManageView.vue'),
+      },
+      {
+        path: '/compensationView',
+        name: 'CompensationView',
+        component: CompensationView,
       },
     ]
   },

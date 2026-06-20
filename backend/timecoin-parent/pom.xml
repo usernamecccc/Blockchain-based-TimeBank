@@ -22,8 +22,8 @@
         <maven.compiler.source>11</maven.compiler.source>
         <maven.compiler.target>11</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-
-
+        <!-- 与 IDEA 内置 JDK 21+ 编译时兼容；过旧版本会触发 TypeTag :: UNKNOWN -->
+        <lombok.version>1.18.36</lombok.version>
     </properties>
 
     <dependencies>
@@ -37,7 +37,7 @@
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
-            <version>1.18.24</version>
+            <version>${lombok.version}</version>
         </dependency>
 
         <!--jwt令牌-->
@@ -120,6 +120,53 @@
         </repository>
     </repositories>
 
-
+    <build>
+        <!-- 用 JDK 22+ 跑 Maven 时 Lombok 会在 javac 里触发 TypeTag :: UNKNOWN；须让 Maven 使用 JDK 11～21 -->
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-enforcer-plugin</artifactId>
+                <version>3.5.0</version>
+                <executions>
+                    <execution>
+                        <id>enforce-jdk-for-lombok</id>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>enforce</goal>
+                        </goals>
+                        <configuration>
+                            <rules>
+                                <requireJavaVersion>
+                                    <version>[11,22)</version>
+                                    <message>用于运行 Maven 的 JDK 版本过新或过旧（需要 11～21）。请在 IntelliJ：Settings → Build Tools → Maven → Runner → JRE 中选择已安装的 JDK 11 或 17（勿用 IDE 自带的过新 JDK 跑 Maven）。也可设置环境变量 JAVA_HOME 指向 JDK 11/17 后再执行 mvn。</message>
+                                </requireJavaVersion>
+                            </rules>
+                            <fail>true</fail>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+        <pluginManagement>
+            <plugins>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-compiler-plugin</artifactId>
+                    <version>3.13.0</version>
+                    <configuration>
+                        <release>11</release>
+                        <encoding>UTF-8</encoding>
+                        <annotationProcessorPaths>
+                            <path>
+                                <groupId>org.projectlombok</groupId>
+                                <artifactId>lombok</artifactId>
+                                <version>${lombok.version}</version>
+                            </path>
+                        </annotationProcessorPaths>
+                    </configuration>
+                </plugin>
+            </plugins>
+        </pluginManagement>
+    </build>
 
 </project>

@@ -1,29 +1,14 @@
 <template>
-    <div></div>
-  </template>
-  
-  <script>
-    export default {
-      data() {
-        return {
-          fullscreenLoading: false
-        }
-      },
-      created() {
-        this.openFullScreen2();
-      },
-      methods: {
-        openFullScreen2() {
-          const loading = this.$loading({
-            lock: true,
-            text: 'Loading',
-            spinner: 'el-icon-loading',
-            background: 'rgba(0, 0, 0, 0.7)'
-          });
-          setTimeout(() => {
-            loading.close();
-          }, 4000);
-        }
-      }
-    }
-  </script>
+  <ai-chat-panel user-type="old" title="老人端AI服务" />
+</template>
+
+<script>
+import AiChatPanel from '@/components/AiChatPanel.vue';
+
+export default {
+  name: 'ArtificialOld',
+  components: {
+    AiChatPanel,
+  },
+};
+</script>

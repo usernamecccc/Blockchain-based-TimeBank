@@ -5,8 +5,6 @@ import org.example.pojo.Activity;
 import org.example.pojo.User;
 import org.example.pojo.Vol;
 import org.example.pojo.VolActivity;
-import org.springframework.transaction.annotation.Transactional;
-
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -112,7 +110,7 @@ public interface VolMapper {
      * @return
      */
     @Select("select user.id,user.name,user.phone," +
-            "user.email,user.age,av.status,av.sign " +
+            "user.email,user.age,av.status,av.sign,av.reward_paid as rewardPaid " +
             "from user,activity_volunteer as av,volunteer as vol " +
             "where av.activity_id=#{activityId} and av.volunteer_id =vol.id and vol.user_id=user.id")
     List<Vol> selectUsers(@Param("activityId") Integer activityId);
@@ -143,15 +141,12 @@ public interface VolMapper {
      * @param volId
      * @return
      */
-    @Select("select id, volunteer_id as volId, activity_id, status, create_time, update_time, sign from activity_volunteer where activity_id=#{activityId} and volunteer_id=#{volId}")
-    @Results({
-            @Result(property = "id",column = "id"),
-            @Result(property = "volId",column = "volId"),
-            @Result(property = "activityId",column = "activity_id"),
-            @Result(property = "status",column = "status"),
-            @Result(property = "createTime",column = "create_time"),
-            @Result(property = "updateTime",column = "updateTime"),
-            @Result(property = "sign",column = "sign")
-    })
+    @Select("select id, volunteer_id as volId, activity_id as activityId, status, create_time as createTime, update_time as updateTime, sign, reward_paid as rewardPaid from activity_volunteer where activity_id=#{activityId} and volunteer_id=#{volId}")
     VolActivity volSelectByActVolId(@Param("activityId") Integer activityId,@Param("volId") Integer volId);
+
+    /**
+     * 行级锁（须在事务内调用），防止并发标记完成导致重复答谢。
+     */
+    @Select("select id, volunteer_id as volId, activity_id as activityId, status, create_time as createTime, update_time as updateTime, sign, reward_paid as rewardPaid from activity_volunteer where activity_id=#{activityId} and volunteer_id=#{volId} for update")
+    VolActivity lockVolunteerActivityRow(@Param("activityId") Integer activityId, @Param("volId") Integer volId);
 }

@@ -29,13 +29,13 @@ export default {
     data() {
         return {
             modules: [
-                { id: 4, name: '医疗康复', icon: 'icon-doctor' },
-                { id: 5, name: '健康管理', icon: 'icon-health' },
-                { id: 6, name: '清洁整理', icon: 'icon-clear' },
-                { id: 7, name: '购物陪同', icon: 'icon-shop' },
-                { id: 8, name: '问诊陪护', icon: 'icon-chaperonage' },
-                { id: 9, name: '物品代购', icon: 'icon-shop1' },
-                { id: 10, name: '其他服务', icon: 'icon-addActivity' },
+                { id: 4, name: '医疗康复', icon: 'icon-doctor', code: 'medical_rehab' },
+                { id: 5, name: '健康管理', icon: 'icon-health', code: 'health_manage' },
+                { id: 6, name: '清洁整理', icon: 'icon-clear', code: 'cleaning' },
+                { id: 7, name: '购物陪同', icon: 'icon-shop', code: 'shopping_companion' },
+                { id: 8, name: '问诊陪护', icon: 'icon-chaperonage', code: 'clinic_companion' },
+                { id: 9, name: '物品代购', icon: 'icon-shop1', code: 'purchase' },
+                { id: 10, name: '其他服务', icon: 'icon-addActivity', code: 'other_service' },
             ],
             // 照片
             images: [
@@ -49,7 +49,13 @@ export default {
             // 在这里执行导航操作，比如使用路由导航到模块页面
             console.log('点击了模块卡片', module);
             // 示例：使用 Vue Router 导航到模块详情页面
-            this.$router.push(`/getInfoActivity`);
+            this.$router.push({
+                path: '/getInfoActivity',
+                query: {
+                    serviceType: module.code || 'other_service',
+                    serviceLabel: module.name || '其他服务',
+                }
+            });
         },
     }
 };
@@ -57,19 +63,61 @@ export default {
 
 <style lang='scss' scoped>
 .phone-main {
-    margin: 20px;
+    min-height: calc(100vh - 130px);
+    margin: 0;
+    padding: 16px 14px 22px;
+    background: var(--old-bg);
+
+    .blockOfImage {
+        overflow: hidden;
+        border: 1px solid var(--old-border);
+        border-radius: 14px;
+        box-shadow: 0 6px 16px rgba(111, 76, 43, 0.10);
+    }
+
+    &::v-deep .el-row {
+        margin-top: 8px;
+    }
+
     .module-card {
         display: flex;
         flex-direction: column;
         align-items: center;
         justify-content: center;
-        height: 100px;
-        border-radius: 8px;
+        min-height: 128px;
+        border-radius: 14px;
         cursor: pointer;
-        margin: 10px;
+        margin: 8px;
+        background: var(--old-surface);
+        border: 1px solid var(--old-border);
+        box-shadow: 0 5px 14px rgba(111, 76, 43, 0.10);
+
+        &::v-deep .el-card {
+            width: 100%;
+            height: 100%;
+            border: none;
+            border-radius: 14px;
+            background: transparent;
+            box-shadow: none;
+        }
+
+        &::v-deep .el-card__body {
+            min-height: 126px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 12px 8px;
+            box-sizing: border-box;
+        }
     }
     .module-card span {
-        font-size: 16px;
+        margin-top: 8px;
+        font-size: 18px;
+        font-weight: 800;
+        line-height: 1.25;
+        color: var(--old-text);
+        text-align: center;
     }
     .el-carousel__item h3 {
         color: #475669;
@@ -88,8 +136,8 @@ export default {
     }
 
     i {
-        width: 40px;
-        height: 40px;
+        width: 48px;
+        height: 48px;
         display: inline-block;
         background-size: cover;
         vertical-align: middle;

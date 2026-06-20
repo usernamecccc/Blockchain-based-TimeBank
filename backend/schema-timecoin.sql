@@ -5,7 +5,9 @@
 CREATE DATABASE IF NOT EXISTS timecoin DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 USE timecoin;
 
+DROP TABLE IF EXISTS compensation_record;
 DROP TABLE IF EXISTS activity_volunteer;
+DROP TABLE IF EXISTS notice;
 DROP TABLE IF EXISTS activity;
 DROP TABLE IF EXISTS volunteer;
 DROP TABLE IF EXISTS old;
@@ -63,8 +65,17 @@ CREATE TABLE activity (
   update_time DATETIME DEFAULT NULL,
   message VARCHAR(512) DEFAULT NULL,
   remain SMALLINT NOT NULL DEFAULT 0,
+  volunteer_reward INT NOT NULL DEFAULT 0 COMMENT '完成后老人向每名志愿者答谢的时间币数量',
   CONSTRAINT fk_act_old FOREIGN KEY (old_id) REFERENCES old(id),
   CONSTRAINT fk_act_admi FOREIGN KEY (administrator_id) REFERENCES administrator(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE notice (
+  id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  title VARCHAR(255) NOT NULL DEFAULT '',
+  content TEXT NOT NULL,
+  create_time DATETIME DEFAULT NULL,
+  INDEX idx_notice_create_time (create_time)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE activity_volunteer (
@@ -73,11 +84,24 @@ CREATE TABLE activity_volunteer (
   volunteer_id INT NOT NULL,
   status SMALLINT DEFAULT NULL,
   sign SMALLINT DEFAULT NULL,
+  reward_paid SMALLINT NOT NULL DEFAULT 0 COMMENT '0未付答谢 1已付',
   create_time DATETIME DEFAULT NULL,
   update_time DATETIME DEFAULT NULL,
   UNIQUE KEY uk_act_vol (activity_id, volunteer_id),
   CONSTRAINT fk_av_act FOREIGN KEY (activity_id) REFERENCES activity(id) ON DELETE CASCADE,
   CONSTRAINT fk_av_vol FOREIGN KEY (volunteer_id) REFERENCES volunteer(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE compensation_record (
+  id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  activity_id INT NOT NULL,
+  volunteer_table_id INT NOT NULL,
+  elder_user_id INT NOT NULL,
+  amount INT NOT NULL,
+  status SMALLINT NOT NULL DEFAULT 0 COMMENT '0 待追讨 / 1 已追讨 / 2 平台核销',
+  create_time DATETIME DEFAULT NULL,
+  update_time DATETIME DEFAULT NULL,
+  INDEX idx_compensation_status (status)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- 默认管理员（老人发布活动需要 administrator 外键；PC 端可用 admin / 123456 登录）

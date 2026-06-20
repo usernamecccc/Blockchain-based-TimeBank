@@ -112,4 +112,9 @@ public interface UserService {
 
     //存图片本地位置
     void updateImage(String local,Integer id);
+    /**
+     * 获取用户统计信息
+     * @return
+     */
+    java.util.Map<String, Object> getUserStats();
 }
