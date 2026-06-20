@@ -41,4 +41,16 @@ public class BlockchainProperties {
      * 若为 null、零或负数则视作不限制上限（不推荐生产环境）。
      */
     private BigInteger volunteerRewardMax = BigInteger.valueOf(999);
+
+    /** 是否启用定时余额对账 */
+    private boolean reconcileEnabled = true;
+
+    /** 对账发现不一致时是否以链上余额为准自动修正数据库 */
+    private boolean reconcileAutoFix = true;
+
+    /** 定时对账间隔（毫秒），默认 30 分钟 */
+    private long reconcileIntervalMs = 1_800_000L;
+
+    /** 应用启动后是否执行一次全量对账（用于初始化余额镜像） */
+    private boolean reconcileOnStartup = true;
 }

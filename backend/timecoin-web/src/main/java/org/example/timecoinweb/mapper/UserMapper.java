@@ -53,6 +53,18 @@ public interface UserMapper {
     @Select("SELECT role AS user_role, COUNT(*) AS role_cnt FROM `user` GROUP BY role")
     List<java.util.Map<String, Object>> countUsersByRole();
 
-    @Select("select id, username, name, role from user where id = #{userId}")
+    @Select("select id, username, name, role, coin_balance as coinBalance, balance_sync_time as balanceSyncTime from user where id = #{userId}")
     User selectById(@Param("userId") Integer userId);
+
+    @Select("select id, username, name, role, coin_balance as coinBalance, balance_sync_time as balanceSyncTime from user")
+    List<User> selectAllForBalanceReconcile();
+
+    @Update("update user set coin_balance = coin_balance + #{delta}, update_time = now() where id = #{id}")
+    int addCoinBalance(@Param("id") Integer id, @Param("delta") long delta);
+
+    @Update("update user set coin_balance = coin_balance - #{amount}, update_time = now() where id = #{id} and coin_balance >= #{amount}")
+    int deductCoinBalance(@Param("id") Integer id, @Param("amount") long amount);
+
+    @Update("update user set coin_balance = #{balance}, balance_sync_time = now(), update_time = now() where id = #{id}")
+    void setCoinBalance(@Param("id") Integer id, @Param("balance") long balance);
 }

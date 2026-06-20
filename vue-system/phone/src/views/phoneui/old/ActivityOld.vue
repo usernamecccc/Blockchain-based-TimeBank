@@ -1,113 +1,195 @@
 <template>
-    <div class="addActivityBox">
-        <el-dialog :visible.sync="dialogVisible" title="增添活动">
+    <div class="activity-old-page">
+        <el-dialog
+            :visible.sync="dialogVisible"
+            title="发布新活动"
+            width="88%"
+            :append-to-body="true"
+        >
             <el-result icon="warning" title="是否确认" :subTitle="publishFeeHint">
                 <template slot="extra">
-                    <el-button type="primary" size="medium" @click="addActivity">确 定</el-button>
+                    <el-button type="primary" size="medium" round @click="addActivity">开始填写</el-button>
                 </template>
             </el-result>
         </el-dialog>
-        <el-header class="header">
-            <el-button type="text" @click="search1" style="margin-left: 20px;">待审核</el-button>
-            <el-divider direction="vertical"></el-divider>
-            <el-button type="text" @click="search2">审核通过</el-button>
-            <el-divider direction="vertical"></el-divider>
-            <el-button type="text" @click="search3">进行中</el-button>
-            <el-divider direction="vertical"></el-divider>
-            <el-button type="text" @click="search4">拒绝</el-button>
-            <el-divider direction="vertical"></el-divider>
-            <el-button type="text" @click="search5" style="margin-right: 20px;">已过期</el-button>
-        </el-header>
-        <el-container class="mainBox">
-            <el-header style="display: flex;justify-content: space-between;align-items: center;">
-                <el-input placeholder="请输入内容" v-model="searchTitle" style="margin-right: 20px;"></el-input>
-                <el-button round type="primary">搜索</el-button>
-                <el-button round type="primary" @click="addOpen">增添活动</el-button>
-            </el-header>
-            <el-main class="activity">
-                <ul class="infinite-list" v-infinite-scroll="load" infinite-scroll-disabled="busy"
-                    infinite-scroll-distance="5" style="overflow:auto;padding-inline-start:0px">
-                    <div v-for="(row, index) in tableData" :key="index" @click="handleCardClick(row)">
-                        <el-card :body-style="{ padding: '0px' }" shadow="always">
-                            <div class="cardContent">
-                                <img :src="$activityImagePath" class="image">
-                                <div class="contentBox">
-                                    <div style="font-size: 17px;">
-                                        {{ row.title }}
-                                        <el-tag size="mini" type="info" style="margin-left: 6px;">
-                                            {{ formatServiceTypeLabel(row.serviceType) }}
-                                        </el-tag>
-                                    </div>
-                                    <div style="font-size: 14px;">剩余名额：{{ row.remain }}</div>
-                                    <el-progress
-                                        :percentage="Number(((parseFloat(row.quota) - parseFloat(row.remain)) / parseFloat(row.quota) * 100).toFixed(1))"></el-progress>
-                                    <div
-                                        style="display: flex;justify-content: space-between;align-items: center;font-size: 12px;">
-                                        {{ formatActivityDates(row) }}
-                                        <el-tag size="mini" v-if="!isBeforeDeadline(row.deadline)"
-                                            type="danger">报名结束</el-tag>
-                                        <el-tag size="mini" v-else type="success">报名中</el-tag>
-                                    </div>
-                                    <div style="font-size: 12px;">{{ row.address }}</div>
-                                    <!-- 删除按钮 -->
-                                    <div style="display: flex;justify-content: center;align-items: center;">
-                                        <el-button type="danger" round size="mini" @click="deleteActivity(row.id)"
-                                            style="margin-top: 5px;width: 80%;">删除</el-button>
-                                    </div>
-                                </div>
+
+        <div class="page-header">
+            <div>
+                <h1 class="page-title">我发布的活动</h1>
+                <p class="page-subtitle">管理报名、审核与志愿者答谢</p>
+            </div>
+            <el-button type="primary" round class="publish-btn" @click="addOpen">
+                <i class="el-icon-plus"></i> 发布
+            </el-button>
+        </div>
+
+        <div class="toolbar">
+            <el-input
+                v-model="searchTitle"
+                placeholder="搜索活动标题"
+                prefix-icon="el-icon-search"
+                clearable
+                @keyup.enter.native="handleSearch"
+            />
+            <el-button type="primary" round @click="handleSearch">搜索</el-button>
+        </div>
+
+        <div class="status-tabs">
+            <el-button
+                v-for="tab in statusTabs"
+                :key="tab.value"
+                type="text"
+                class="status-tab"
+                :class="{ active: status === tab.value }"
+                @click="switchStatus(tab.value)"
+            >{{ tab.label }}</el-button>
+        </div>
+
+        <div class="list-panel" v-loading="listLoading">
+            <el-empty
+                v-if="!listLoading && tableData.length === 0"
+                :description="emptyHint"
+                class="list-empty"
+            />
+
+            <div v-else class="list-content">
+                <ul class="activity-list">
+                    <li
+                        v-for="row in tableData"
+                        :key="row.id"
+                        class="activity-card"
+                        @click="handleCardClick(row)"
+                    >
+                        <img :src="$activityImagePath" class="card-image" alt="">
+                        <div class="card-body">
+                            <div class="card-title-row">
+                                <span class="card-title">{{ row.title }}</span>
                             </div>
-                        </el-card>
-                    </div>
+                            <div class="card-tags">
+                                <el-tag size="mini" :type="getAuditStatusTag(row.status).type">
+                                    {{ getAuditStatusTag(row.status).label }}
+                                </el-tag>
+                                <el-tag size="mini" type="info" effect="plain">
+                                    {{ formatServiceTypeLabel(row.serviceType) }}
+                                </el-tag>
+                                <el-tag size="mini" :type="getRegistrationTag(row).type">
+                                    {{ getRegistrationTag(row).label }}
+                                </el-tag>
+                            </div>
+
+                            <div class="card-meta">
+                                <span>名额 {{ filledQuota(row) }}/{{ row.quota }}</span>
+                                <span class="reward-text" :class="{ 'reward-text--zero': formatVolunteerRewardAmount(row) <= 0 }">
+                                    答谢 {{ formatVolunteerRewardAmount(row) }} 币/人
+                                </span>
+                            </div>
+
+                            <el-progress
+                                :percentage="quotaPercent(row)"
+                                :stroke-width="8"
+                                :show-text="false"
+                                class="card-progress"
+                            />
+
+                            <div class="card-footer">
+                                <div class="card-info">
+                                    <div><i class="el-icon-date"></i> {{ formatActivityDates(row) }}</div>
+                                    <div class="card-address"><i class="el-icon-location-outline"></i> {{ row.address }}</div>
+                                </div>
+                                <el-button
+                                    type="danger"
+                                    plain
+                                    round
+                                    size="mini"
+                                    class="delete-btn"
+                                    @click.stop="confirmDelete(row)"
+                                >删除</el-button>
+                            </div>
+                        </div>
+                    </li>
                 </ul>
-            </el-main>
-        </el-container>
+                <div v-if="hasMore" class="load-more-wrap">
+                    <el-button round :loading="busy" @click="loadMore">
+                        {{ busy ? '加载中…' : '加载更多' }}
+                    </el-button>
+                </div>
+                <p v-else-if="tableData.length > 0" class="list-end-hint">已显示全部活动</p>
+            </div>
+        </div>
     </div>
 </template>
 
 <script>
 import request from '@/utils/request';
+import {
+    formatActivityDates,
+    formatVolunteerRewardAmount,
+    formatServiceTypeLabel,
+    getAuditStatusTag,
+    getRegistrationTag,
+    quotaPercent,
+} from '@/utils/oldActivity';
 
 export default {
     name: 'ActivityOld',
     data() {
         return {
-            // 弹窗
             dialogVisible: false,
-            // 卡片
+            listLoading: false,
             originalData: [],
-            pageSize: 5, // 每页显示的条目数量
-            totalItems: 0, // 总条目数量
-            currentPage: 1, // 当前页码
-            tableData: [], // 表格数据
-            searchTitle: '', // 搜索文本
-            status: 2, // 筛选用 status（接口若未接筛选则仅前端预留）
+            pageSize: 8,
+            totalItems: 0,
+            currentPage: 1,
+            tableData: [],
+            searchTitle: '',
+            status: 2,
             publishFeeHint: '加载规则中…',
-            // 无限滚动
             busy: false,
-        }
+            statusTabs: [
+                { label: '待审核', value: 1 },
+                { label: '已通过', value: 2 },
+                { label: '进行中', value: 3 },
+                { label: '已拒绝', value: 4 },
+                { label: '已过期', value: 5 },
+            ],
+        };
+    },
+    computed: {
+        emptyHint() {
+            const map = {
+                1: '暂无待审核活动',
+                2: '暂无已通过活动',
+                3: '暂无进行中活动',
+                4: '暂无被拒绝活动',
+                5: '暂无已过期活动',
+            };
+            return map[this.status] || '暂无活动，点击右上角发布';
+        },
+        hasMore() {
+            return this.tableData.length < this.totalItems;
+        },
     },
     mounted() {
         this.fetchPublishFee();
-        // 初始化时计算当前页的数据
-        this.search();
+        this.reloadList();
     },
     methods: {
-        formatServiceTypeLabel(serviceType) {
-            const map = {
-                medical_rehab: '医疗康复',
-                health_manage: '健康管理',
-                cleaning: '清洁整理',
-                shopping_companion: '购物陪同',
-                clinic_companion: '问诊陪护',
-                purchase: '物品代购',
-                other_service: '其他服务',
-            };
-            if (!serviceType) return map.other_service;
-            return map[serviceType] || map.other_service;
+        formatActivityDates,
+        formatVolunteerRewardAmount,
+        formatServiceTypeLabel,
+        getAuditStatusTag,
+        getRegistrationTag,
+        quotaPercent,
+        filledQuota(row) {
+            const quota = Number(row && row.quota);
+            const remain = Number(row && row.remain);
+            if (!Number.isFinite(quota)) return 0;
+            const filled = quota - (Number.isFinite(remain) ? remain : 0);
+            return Math.max(0, filled);
         },
         fetchPublishFee() {
             request.get('/info/publishActivityFee')
-                .then(res => {
+                .then((res) => {
                     if (res.code === 1 && res.data) {
                         if (res.data.deductEnabled) {
                             this.publishFeeHint = `确认后将进入填写流程；发布成功时链上将扣除 ${res.data.cost} 时间币`;
@@ -122,250 +204,336 @@ export default {
                     this.publishFeeHint = '确认后将进入填写流程';
                 });
         },
-        formatActivityDates(activity) {
-            const message = activity && activity.message ? String(activity.message) : '';
-            if (message) {
-                try {
-                    const parsed = JSON.parse(message);
-                    if (parsed && Array.isArray(parsed.dates) && parsed.dates.length > 0) {
-                        return parsed.dates
-                            .map(item => String(item).split('-').pop())
-                            .map(day => `${parseInt(day, 10)}号`)
-                            .join(',');
-                    }
-                } catch (error) {
-                    // Ignore malformed legacy message
-                }
-            }
-            if (!activity || !activity.date) return '日期待定';
-            const day = String(activity.date).split('-').pop();
-            return `${parseInt(day, 10)}号`;
+        reloadList() {
+            this.currentPage = 1;
+            this.totalItems = 0;
+            this.tableData = [];
+            this.busy = false;
+            this.listLoading = true;
+            return this.fetchPage()
+                .then(() => {
+                    this.currentPage = 2;
+                })
+                .finally(() => {
+                    this.listLoading = false;
+                });
         },
-        load() {
-            if (this.tableData.length >= this.totalItems) {
+        fetchPage() {
+            const params = new URLSearchParams();
+            params.append('pageSize', String(this.pageSize));
+            params.append('page', String(this.currentPage));
+            params.append('status', String(this.status));
+            const title = (this.searchTitle || '').trim();
+            if (title) params.append('title', title);
 
-                return;
-            }
-            if (this.busy) return;
+            return request.get(`/users/old?${params}`)
+                .then((response) => {
+                    if (response.code === 1) {
+                        this.totalItems = response.data.total;
+                        this.tableData = [...this.tableData, ...(response.data.rows || [])];
+                        return this.tableData;
+                    }
+                    this.$message.error(response.msg);
+                    return Promise.reject(response.msg);
+                })
+                .catch((error) => {
+                    console.error('获取数据失败:', error);
+                    return Promise.reject(error);
+                });
+        },
+        loadMore() {
+            if (!this.hasMore || this.busy || this.listLoading) return;
             this.busy = true;
-
-            // 调用你的search方法来获取新的数据
-            this.search().then(() => {
-                this.currentPage++;
-                this.busy = false;
-            });
+            this.fetchPage()
+                .then(() => {
+                    this.currentPage++;
+                })
+                .finally(() => {
+                    this.busy = false;
+                });
+        },
+        handleSearch() {
+            this.reloadList();
+        },
+        switchStatus(status) {
+            if (this.status === status) return;
+            this.status = status;
+            this.reloadList();
         },
         addOpen() {
             this.dialogVisible = true;
         },
-        search() {
-            return new Promise((resolve, reject) => {
-                // 创建 URLSearchParams 对象
-                const params = new URLSearchParams();
-                // 添加搜索条件到 URLSearchParams 对象中
-                params.append('pageSize', this.pageSize);
-                params.append('page', this.currentPage);
-                params.append('status', this.status);
-                params.append('title', this.searchTitle);
-                // 将 URLSearchParams 对象转换为查询字符串
-                const queryString = params.toString();
-                // 发起请求时将查询字符串添加到URL中
-                request.get(`/users/old?${queryString}`)
-                    .then(response => {
-                        if (response.code === 1) {
-                            this.totalItems = response.data.total;
-                            this.originalData = response.data.rows;
-                            this.tableData = [];
-                            // 合并原始数据到 tableData 数组中
-                            this.tableData = [...this.tableData, ...this.originalData];
-                            // 将新的数据作为Promise的结果返回
-                            resolve(this.tableData);
-                        } else {
-                            this.$message.error(response.msg);
-                            reject(response.msg);
-                        }
-                    })
-                    .catch(error => {
-                        console.error('获取数据失败:', error);
-                    });
+        addActivity() {
+            this.dialogVisible = false;
+            this.$router.push({ name: 'GetInfoActivity' });
+        },
+        handleCardClick(row) {
+            this.$router.push({
+                name: 'IdActivityOld',
+                query: { id: row.id },
             });
         },
+        confirmDelete(row) {
+            this.$confirm(`确定删除活动「${row.title}」吗？此操作不可恢复。`, '删除活动', {
+                confirmButtonText: '删除',
+                cancelButtonText: '取消',
+                type: 'warning',
+            }).then(() => {
+                this.deleteActivity(row.id);
+            }).catch(() => {});
+        },
         deleteActivity(id) {
-            let ids = [];
-            ids.push(id);
-            request.delete(`/users/old/${ids.join(',')}`)
-                .then(response => {
+            request.delete(`/users/old/${id}`)
+                .then((response) => {
                     if (response.code === 1) {
-                        this.$message.success(response.msg);
-                        this.search();
-                    }
-                    else {
+                        this.$message.success(response.msg || '删除成功');
+                        this.reloadList();
+                    } else {
                         this.$message.error(response.msg);
                     }
                 })
-                .catch(error => {
-                    console.error('There was a problem with the request:', error);
+                .catch((error) => {
+                    console.error('删除失败:', error);
+                    this.$message.error('删除失败，请稍后重试');
                 });
         },
-        addActivity() {
-            this.$router.push({
-                name: 'GetInfoActivity',
-            });
-        },
-        handleCardClick(row) {
-            // 在发送路由跳转时将数据作为查询参数传递
-            this.$router.push({
-                name: 'IdActivityOld',
-                query: {
-                    id: row.id
-                }
-            });
-        },
-        // 判断是否在报名截止日期之前
-        isBeforeDeadline(deadline) {
-            // 将截止日期字符串转换为日期对象
-            const deadlineDate = new Date(deadline);
-            // 获取当前时间
-            const currentDate = new Date();
-            // 如果当前时间早于截止日期，则返回 true，否则返回 false
-            return currentDate < deadlineDate;
-        },
-        search1() {
-            this.status = 1;
-            this.search();
-        },
-        search2() {
-            this.status = 2;
-            this.search();
-        },
-        search3() {
-            this.status = 3;
-            this.search();
-        },
-        search4() {
-            this.status = 4;
-            this.search();
-        },
-        search5() {
-            this.status = 5;
-            this.search();
-        },
-    }
-}
+    },
+};
 </script>
 
 <style lang="scss" scoped>
-.addActivityBox {
-    .header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        border: 1px solid #DCDFE6;
-        padding: 0px;
-        margin: 5px;
-    }
-
-    .mainBox {
-        .activity {
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            /* 水平居中 */
-            align-items: center;
-            /* 垂直居中 */
-            padding: 0px;
-
-            .el-card {
-                display: flex;
-                padding: 8px;
-                margin-left: 10px;
-                margin-right: 10px;
-                height: 140px;
-                align-items: center;
-                margin-bottom: 15px;
-
-                .cardContent {
-                    display: flex;
-                    justify-content: space-between;
-                    align-items: center;
-
-                    .image {
-                        width: 40%;
-                        display: block;
-                        border-radius: 10px;
-                        box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
-                    }
-
-                    .contentBox {
-                        padding: 8px;
-                        width: 60%;
-                    }
-                }
-
-            }
-        }
-    }
-}
-
-.addActivityBox {
+.activity-old-page {
     min-height: calc(100vh - 130px);
+    padding: 12px 12px 24px;
     background: var(--old-bg);
     color: var(--old-text);
-    padding-bottom: 14px;
+    box-sizing: border-box;
 }
 
-.addActivityBox .header {
-    height: auto !important;
-    min-height: 56px;
-    overflow-x: auto;
-    border: 1px solid var(--old-border) !important;
-    border-radius: 14px;
-    margin: 8px 10px 12px !important;
-    background: var(--old-surface);
+.page-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 14px;
+    padding: 4px 2px 0;
 }
 
-.addActivityBox .header ::v-deep .el-button {
-    min-height: 44px;
-    padding: 0 8px;
-    color: var(--old-primary);
-    font-size: 15px;
+.page-title {
+    margin: 0;
+    font-size: 22px;
     font-weight: 700;
-    white-space: nowrap;
+    color: var(--old-primary-strong);
+    line-height: 1.3;
 }
 
-.addActivityBox .mainBox ::v-deep .el-header {
-    height: auto !important;
-    min-height: 60px;
-    padding: 8px 10px;
-    gap: 8px;
+.page-subtitle {
+    margin: 6px 0 0;
+    font-size: 13px;
+    color: var(--old-muted);
 }
 
-.addActivityBox .mainBox ::v-deep .el-input__inner {
-    min-height: 46px;
-    border-color: var(--old-border);
-    border-radius: 10px;
-    font-size: 16px;
-}
-
-.addActivityBox .mainBox ::v-deep .el-button {
-    min-height: 46px;
-    font-size: 15px;
-    font-weight: 700;
-}
-
-.addActivityBox .mainBox ::v-deep .el-button--primary {
+.publish-btn {
+    flex-shrink: 0;
+    min-height: 40px;
+    padding: 0 16px;
     background: var(--old-primary);
     border-color: var(--old-primary);
 }
 
-.addActivityBox .mainBox .activity .el-card {
-    border: 1px solid var(--old-border);
-    border-radius: 14px;
-    background: var(--old-surface);
-    box-shadow: 0 5px 16px rgba(111, 76, 43, 0.10);
+.toolbar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 12px;
+
+    .el-input {
+        flex: 1;
+        min-width: 0;
+    }
 }
 
-.addActivityBox .mainBox .activity .contentBox {
+.toolbar ::v-deep .el-input__inner {
+    min-height: 44px;
+    border-color: var(--old-border);
+    border-radius: 12px;
+    font-size: 15px;
+}
+
+.toolbar ::v-deep .el-button--primary {
+    min-height: 44px;
+    background: var(--old-primary);
+    border-color: var(--old-primary);
+}
+
+.status-tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 14px;
+    padding: 4px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.status-tab {
+    flex-shrink: 0;
+    min-width: 72px;
+    height: 34px;
+    padding: 0 14px;
+    border: 1px solid transparent;
+    border-radius: 17px;
+    font-weight: 600;
+    color: var(--old-muted);
+}
+
+.status-tab.active {
+    color: var(--old-primary);
+    border-color: var(--old-primary);
+    background: var(--old-surface);
+}
+
+.list-panel {
+    min-height: 200px;
+}
+
+.list-empty {
+    padding: 48px 0;
+}
+
+.load-more-wrap {
+    display: flex;
+    justify-content: center;
+    padding: 8px 0 16px;
+}
+
+.load-more-wrap ::v-deep .el-button {
+    min-width: 140px;
+    color: var(--old-primary);
+    border-color: var(--old-primary);
+}
+
+.list-end-hint {
+    margin: 8px 0 16px;
+    text-align: center;
+    font-size: 13px;
+    color: var(--old-muted);
+}
+
+.activity-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.activity-card {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 14px;
+    padding: 12px;
+    border: 1px solid var(--old-border);
+    border-radius: 16px;
+    background: var(--old-surface);
+    box-shadow: 0 5px 16px rgba(111, 76, 43, 0.08);
+    cursor: pointer;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+
+    &:active {
+        transform: scale(0.99);
+    }
+}
+
+.card-image {
+    width: 88px;
+    height: 88px;
+    flex-shrink: 0;
+    border-radius: 12px;
+    object-fit: cover;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.card-body {
+    flex: 1;
+    min-width: 0;
+}
+
+.card-title-row {
+    margin-bottom: 6px;
+}
+
+.card-title {
+    font-size: 16px;
+    font-weight: 700;
+    line-height: 1.4;
     color: var(--old-text);
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.card-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 8px;
+}
+
+.card-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: var(--old-muted);
+    margin-bottom: 6px;
+}
+
+.reward-text {
+    color: #67c23a;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.reward-text--zero {
+    color: var(--old-muted);
+    font-weight: 400;
+}
+
+.card-progress {
+    margin-bottom: 8px;
+}
+
+.card-progress ::v-deep .el-progress-bar__inner {
+    background: linear-gradient(90deg, #e8a87c, var(--old-primary));
+}
+
+.card-footer {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.card-info {
+    flex: 1;
+    min-width: 0;
+    font-size: 12px;
+    color: var(--old-muted);
+    line-height: 1.5;
+
+    i {
+        margin-right: 2px;
+    }
+}
+
+.card-address {
+    margin-top: 2px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.delete-btn {
+    flex-shrink: 0;
 }
 </style>

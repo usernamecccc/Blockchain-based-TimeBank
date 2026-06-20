@@ -93,6 +93,32 @@
             <el-button type="primary" @click="onSubmitForm">提交修改</el-button>
         </div>
         <el-divider content-position="center">活动报名情况</el-divider>
+        <div v-if="tableData.length > 0" class="volunteer-summary">
+            <div class="summary-stats">
+                <span>共 {{ tableData.length }} 人报名</span>
+                <span>待完成 {{ pendingVolunteers.length }} 人</span>
+                <span v-if="signedInCount > 0">已签到 {{ signedInCount }} 人</span>
+            </div>
+            <el-button
+                v-if="canBatchComplete"
+                type="warning"
+                round
+                class="batch-thank-btn"
+                :loading="batchLoading"
+                @click="batchThankAll"
+            >
+                <i class="el-icon-present"></i>
+                {{ batchButtonLabel }}
+            </el-button>
+            <el-alert
+                v-if="isActivityEnded && pendingVolunteers.length > 0 && Number(form.volunteerReward || 0) > 0"
+                type="success"
+                :closable="false"
+                show-icon
+                :title="`活动结束后可一键答谢：${pendingVolunteers.length} 人 × ${form.volunteerReward} 时间币 = 合计 ${batchRewardTotal} 时间币`"
+                style="margin-top: 10px;"
+            />
+        </div>
         <div class="activity">
             <ul class="infinite-list" v-infinite-scroll="load" infinite-scroll-disabled="busy"
                 infinite-scroll-distance="5" style="overflow:auto;padding-inline-start:0px">
@@ -103,6 +129,8 @@
                             <div class="contentBox">
                                 <div style="font-size: 17px; font-weight: 600;">
                                     {{ row.name }}
+                                    <el-tag v-if="Number(row.sign) === 1" type="success" size="mini" style="margin-left: 6px;">已签到</el-tag>
+                                    <el-tag v-else type="info" size="mini" style="margin-left: 6px;">未签到</el-tag>
                                     <el-tag v-if="!isVolunteerIncomplete(row)" type="success" size="small" style="margin-left: 8px;">
                                         已完成
                                     </el-tag>
@@ -172,6 +200,7 @@ export default {
             currentPage1: 1,
             deadline: '',
             isEndSign: false,
+            batchLoading: false,
             // 防止重复点击
             loadingIds: new Set(),
             // 选择器
@@ -206,7 +235,7 @@ export default {
             },
             // 卡片
             originalData: [],
-            pageSize: 5, // 每页显示的条目数量
+            pageSize: 100, // 志愿者名单一次拉全，便于批量答谢统计
             totalItems: 0, // 总条目数量
             currentPage: 1, // 当前页码
             tableData: [], // 表格数据
@@ -220,6 +249,9 @@ export default {
         this.search();
         this.search1();
         this.getIsEndSign();
+    },
+    activated() {
+        this.search1();
     },
     computed: {
         statusLabel() {
@@ -256,6 +288,32 @@ export default {
                     value: value == null || value === '' ? '-' : String(value),
                 };
             });
+        },
+        isActivityEnded() {
+            if (!this.form.date || !this.form.end) return false;
+            const end = new Date(`${this.form.date}T${this.form.end}`);
+            return !Number.isNaN(end.getTime()) && end.getTime() <= Date.now();
+        },
+        pendingVolunteers() {
+            return (this.tableData || []).filter((row) => this.isVolunteerIncomplete(row));
+        },
+        signedInCount() {
+            return (this.tableData || []).filter((row) => Number(row.sign) === 1).length;
+        },
+        batchRewardTotal() {
+            const reward = Number(this.form.volunteerReward || 0);
+            return reward * this.pendingVolunteers.length;
+        },
+        canBatchComplete() {
+            return this.isActivityEnded && this.pendingVolunteers.length > 0 && !this.batchLoading;
+        },
+        batchButtonLabel() {
+            const count = this.pendingVolunteers.length;
+            const reward = Number(this.form.volunteerReward || 0);
+            if (reward > 0) {
+                return `一键答谢（${count} 人 · 合计 ${this.batchRewardTotal} 时间币）`;
+            }
+            return `一键标记完成（${count} 人）`;
         },
     },
     methods: {
@@ -329,13 +387,58 @@ export default {
             }
             try {
                 const activityDate = new Date(this.form.date);
-                const [hours, minutes] = this.form.begin.split(':');
+                const [hours, minutes] = String(this.form.begin).split(':');
                 activityDate.setHours(parseInt(hours, 10), parseInt(minutes, 10), 0, 0);
                 this.isEndSign = activityDate.getTime() <= now.getTime();
             } catch (e) {
                 console.error('解析活动时间失败:', e);
                 this.isEndSign = false;
             }
+        },
+        batchThankAll() {
+            const count = this.pendingVolunteers.length;
+            const reward = Number(this.form.volunteerReward || 0);
+            const confirmText = reward > 0
+                ? `将为 ${count} 名志愿者各支付 ${reward} 时间币，合计 ${this.batchRewardTotal} 时间币，并从您的链上余额划转。是否确认？`
+                : `将把 ${count} 名志愿者标记为服务完成（本活动无时间币答谢）。是否确认？`;
+
+            this.$confirm(confirmText, reward > 0 ? '一键答谢' : '一键标记完成', {
+                confirmButtonText: '确认',
+                cancelButtonText: '取消',
+                type: 'warning',
+            }).then(() => {
+                this.batchLoading = true;
+                request.put('/users/old/status/batch', { id: this.id })
+                    .then((response) => {
+                        if (response.code === 1 && response.data) {
+                            const d = response.data;
+                            let msg = `成功处理 ${d.successCount} 人`;
+                            if (d.skipCount > 0) msg += `，${d.skipCount} 人已完成已跳过`;
+                            if (d.failCount > 0) msg += `，${d.failCount} 人失败`;
+                            if (d.failCount > 0) {
+                                this.$message.warning(msg);
+                                const detail = (d.failures || [])
+                                    .map((f) => `${f.name || f.userId}: ${f.reason}`)
+                                    .join('；');
+                                if (detail) {
+                                    this.$alert(detail, '部分志愿者答谢失败', { type: 'warning' });
+                                }
+                            } else {
+                                this.$message.success(msg);
+                            }
+                            this.search1();
+                        } else {
+                            this.$message.error(response.msg || '批量操作失败');
+                        }
+                    })
+                    .catch((error) => {
+                        console.error('批量答谢失败:', error);
+                        this.$message.error('批量操作失败，请检查网络或链上余额');
+                    })
+                    .finally(() => {
+                        this.batchLoading = false;
+                    });
+            }).catch(() => {});
         },
         /** 后端可能返回 number / string / null */
         isVolunteerIncomplete(row) {
@@ -500,6 +603,29 @@ export default {
         justify-content: center;
         align-items: center;
         padding: 20px;
+    }
+
+    .volunteer-summary {
+        width: 90%;
+        margin-bottom: 12px;
+        padding: 12px 14px;
+        border-radius: 12px;
+        background: #fff;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.08);
+        box-sizing: border-box;
+    }
+
+    .summary-stats {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        font-size: 13px;
+        color: #606266;
+        margin-bottom: 10px;
+    }
+
+    .batch-thank-btn {
+        width: 100%;
     }
 
     .activity {

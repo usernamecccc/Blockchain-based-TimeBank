@@ -59,6 +59,7 @@
 <script>
 import router from '@/router';
 import request from '@/utils/request';
+import { resolveAvatarUrl } from '@/utils/imageUrl';
 
 export default {
     name: 'HomeOld',
@@ -79,19 +80,22 @@ export default {
         },
     },
     created() {
-        this.search();
+        this.loadProfile();
         this.fetchCoinBalance();
+    },
+    activated() {
+        this.loadProfile();
     },
     methods: {
         redirectToInfo() {
             router.push('infoPhone');
         },
-        search() {    
-            request.get(`/info`)
+        loadProfile() {
+            request.get('/info')
                 .then(response => {
                 if (response.code === 1) {
                     this.infoData = response.data;
-                    this.squareUrl = response.data.image;
+                    this.squareUrl = resolveAvatarUrl(response.data.image);
                 } else {
                     this.$message.error(response.msg);
                 }

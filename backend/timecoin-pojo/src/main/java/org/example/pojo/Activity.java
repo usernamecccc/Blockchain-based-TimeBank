@@ -35,4 +35,11 @@ public class Activity {
     private Short remain;
     /** 每名志愿者完成后老人答谢的时间币（整数）；0 表示不向志愿者链上答谢 */
     private Integer volunteerReward;
+
+    /** 当前志愿者在该活动的签到状态（仅「我的活动」列表查询时填充）：1=已签到 */
+    private Short volSign;
+    /** 当前志愿者服务完成状态（老人确认）：1=已完成 */
+    private Short volActStatus;
+    /** 当前志愿者是否已收到答谢时间币：1=已答谢 */
+    private Short volRewardPaid;
 }

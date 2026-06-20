@@ -101,7 +101,8 @@ public class UserCoinController {
                 return Result.error("余额不足！当前余额：" + balance + "，需要转账：" + amount);
             }
 
-            String txHash = timeCoinChainService.transfer(fromUserId, request.getToUserId().trim(), amount);
+            String txHash = timeCoinChainService.transfer(fromUserId, request.getToUserId().trim(), amount,
+                    "USER_TRANSFER", fromUserId);
 
             Map<String, Object> body = new HashMap<>();
             body.put("txHash", txHash);

@@ -146,6 +146,7 @@
 <script>
 import { removeToken } from '@/utils/auth';
 import request from '@/utils/request';
+import { resolveAvatarUrl } from '@/utils/imageUrl';
 
 export default {
     name: 'InfoPhone',
@@ -175,7 +176,10 @@ export default {
             request.get(`/info`)
                 .then(response => {
                     if (response.code === 1) {
-                        this.form = response.data;
+                        const data = response.data;
+                        data.image = resolveAvatarUrl(data.image);
+                        this.form = data;
+                        this.imageUrl = data.image || '';
                     } else {
                         this.$message.error(response.msg);
                     }
@@ -197,10 +201,9 @@ export default {
             this.dialogVisible1 = true;
         },
         handleAvatarSuccess(res) {
-            const imageUrl = this.baseUrl + res.data; // 假设返回的响应中包含了文件的 URL 地址
-            console.log(imageUrl);
-            // 将文件 URL 赋值给 imageUrl
+            const imageUrl = resolveAvatarUrl(res.data);
             this.imageUrl = imageUrl;
+            this.form.image = imageUrl;
         },
         beforeAvatarUpload(file) {
             const isJPG = file.type === 'image/jpeg';
@@ -212,8 +215,8 @@ export default {
             if (!isLt2M) {
                 this.$message.error('上传头像图片大小不能超过 2MB!');
             }
-            let image = new FormData();
-            image.append('file', file); // 将文件添加到 FormData 中
+            const image = new FormData();
+            image.append('image', file);
 
             if (isJPG && isLt2M) {
                 request.post(`/info`, image)

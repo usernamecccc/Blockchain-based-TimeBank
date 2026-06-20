@@ -93,6 +93,11 @@ public interface UserService {
     void updateVolActivity(VolActivity volActivity);
 
     /**
+     * 老人在活动结束后，批量将未完成志愿者标记完成并链上答谢（若活动设置了答谢）。
+     */
+    java.util.Map<String, Object> batchCompleteVolunteers(Integer elderlyUserId, Integer activityId);
+
+    /**
      * 将志愿者用户的活动地址
      * 与数据库中的活动地址比较，
      * 然后
