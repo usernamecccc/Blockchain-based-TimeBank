@@ -6,6 +6,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.example.pojo.Result;
 import org.example.pojo.User;
 import org.example.timecoinweb.mapper.RegisterMapper;
+import org.example.timecoinweb.service.PasswordService;
 import org.example.timecoinweb.service.TimeCoinChainService;
 import org.example.utils.JwtUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,6 +28,8 @@ public class UserCoinController {
 
     @Autowired
     private RegisterMapper registerMapper;
+    @Autowired
+    private PasswordService passwordService;
 
     @GetMapping("/balance")
     public Result getMyBalance(@RequestHeader("token") String token) {
@@ -73,8 +76,11 @@ public class UserCoinController {
                 return Result.error("用户不存在");
             }
 
-            if (!request.getPassword().equals(currentUser.getPassword())) {
+            if (!passwordService.matches(request.getPassword(), currentUser.getPassword())) {
                 return Result.error("密码错误");
+            }
+            if (passwordService.needsUpgrade(currentUser.getPassword())) {
+                registerMapper.updatePasswordById(fromId, passwordService.encode(request.getPassword()));
             }
 
             BigInteger amount = new BigInteger(request.getAmount().trim());

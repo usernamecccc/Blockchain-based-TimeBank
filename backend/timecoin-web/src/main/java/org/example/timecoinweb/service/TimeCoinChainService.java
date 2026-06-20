@@ -101,37 +101,40 @@ public class TimeCoinChainService {
      */
     public String mint(String userId, BigInteger amount) throws Exception {
         requireReady();
-        if (!StringUtils.hasText(userId) || amount == null || amount.signum() <= 0) {
-            throw new IllegalArgumentException("userId 与 amount 无效");
-        }
+        String normalizedUserId = requireUserId(userId, "userId");
+        BigInteger validAmount = requirePositiveAmount(amount);
         Function function = new Function(
                 "mint",
-                Arrays.asList(new Utf8String(userId), new Uint256(amount)),
+                Arrays.asList(new Utf8String(normalizedUserId), new Uint256(validAmount)),
                 Collections.emptyList());
         return sendTransaction(FunctionEncoder.encode(function));
     }
 
     public String transfer(String fromUserId, String toUserId, BigInteger amount) throws Exception {
         requireReady();
+        String normalizedFromUserId = requireUserId(fromUserId, "fromUserId");
+        String normalizedToUserId = requireUserId(toUserId, "toUserId");
+        if (normalizedFromUserId.equals(normalizedToUserId)) {
+            throw new IllegalArgumentException("不能转账给自己");
+        }
+        BigInteger validAmount = requirePositiveAmount(amount);
         Function function = new Function(
                 "transfer",
-                Arrays.asList(new Utf8String(fromUserId), new Utf8String(toUserId), new Uint256(amount)),
+                Arrays.asList(new Utf8String(normalizedFromUserId), new Utf8String(normalizedToUserId), new Uint256(validAmount)),
                 Collections.emptyList());
         return sendTransaction(FunctionEncoder.encode(function));
     }
 
     public BigInteger balanceOf(String userId) throws Exception {
         requireReady();
-        if (!StringUtils.hasText(userId)) {
-            throw new IllegalArgumentException("userId 不能为空");
-        }
+        String normalizedUserId = requireUserId(userId, "userId");
         Web3j web3j = web3jProvider.getIfAvailable();
         Credentials credentials = credentialsProvider.getIfAvailable();
         String contract = blockchainProperties.getContractAddress();
 
         Function function = new Function(
                 "balanceOf",
-                Collections.singletonList(new Utf8String(userId)),
+                Collections.singletonList(new Utf8String(normalizedUserId)),
                 Collections.singletonList(new TypeReference<Uint256>() {
                 }));
 
@@ -156,6 +159,20 @@ public class TimeCoinChainService {
         if (!isChainReady()) {
             throw new IllegalStateException(getNotReadyReason());
         }
+    }
+
+    private static String requireUserId(String userId, String fieldName) {
+        if (!StringUtils.hasText(userId)) {
+            throw new IllegalArgumentException(fieldName + " 不能为空");
+        }
+        return userId.trim();
+    }
+
+    private static BigInteger requirePositiveAmount(BigInteger amount) {
+        if (amount == null || amount.signum() <= 0) {
+            throw new IllegalArgumentException("amount 必须大于 0");
+        }
+        return amount;
     }
 
     private String sendTransaction(String encodedData) throws Exception {

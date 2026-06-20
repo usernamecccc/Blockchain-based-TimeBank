@@ -6,10 +6,12 @@ import org.example.timecoinweb.mapper.AdmiMapper;
 import org.example.timecoinweb.mapper.OldMapper;
 import org.example.timecoinweb.mapper.RegisterMapper;
 import org.example.timecoinweb.mapper.VolMapper;
+import org.example.timecoinweb.service.PasswordService;
 import org.example.timecoinweb.service.RegisterService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
 
@@ -25,6 +27,8 @@ public class RegisterServiceImpl implements RegisterService{
     private OldMapper oldMapper;
     @Autowired
     private VolMapper volMapper;
+    @Autowired
+    private PasswordService passwordService;
 
 
     @Override
@@ -32,6 +36,7 @@ public class RegisterServiceImpl implements RegisterService{
         //调用对应的registermapper
         user.setCreateTime(LocalDateTime.now());
         user.setUpdateTime(LocalDateTime.now());
+        user.setPassword(passwordService.encodeIfNecessary(user.getPassword()));
 
         //将user存入到user表中
         try {
@@ -43,7 +48,10 @@ public class RegisterServiceImpl implements RegisterService{
 
 
         //提取出user,为了把他存入老人、志愿者、管理员表
-        User user2=registerMapper.getByUsernameAndPassword(user);
+        User user2=registerMapper.getByUsername(user.getUsername());
+        if (user2 == null) {
+            return "注册失败，请稍后重试";
+        }
 
         switch (user2.getRole()){
             case 1:
@@ -62,7 +70,19 @@ public class RegisterServiceImpl implements RegisterService{
 
     @Override
     public User login(User user) {
-        return registerMapper.getByUsernameAndPassword(user);
+        if (user == null || !StringUtils.hasText(user.getUsername()) || !StringUtils.hasText(user.getPassword())) {
+            return null;
+        }
+        User storedUser = registerMapper.getByUsername(user.getUsername());
+        if (storedUser == null || !passwordService.matches(user.getPassword(), storedUser.getPassword())) {
+            return null;
+        }
+        if (passwordService.needsUpgrade(storedUser.getPassword())) {
+            String encodedPassword = passwordService.encode(user.getPassword());
+            registerMapper.updatePasswordById(storedUser.getId(), encodedPassword);
+            storedUser.setPassword(encodedPassword);
+        }
+        return storedUser;
     }
 
     @Override
