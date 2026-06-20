@@ -10,10 +10,12 @@ import org.example.timecoinweb.mapper.OldMapper;
 import org.example.timecoinweb.mapper.UserMapper;
 import org.example.timecoinweb.mapper.VolMapper;
 import org.example.timecoinweb.service.ManageUserService;
+import org.example.timecoinweb.service.PasswordService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -29,6 +31,8 @@ public class ManageUserServiceImpl implements ManageUserService {
     private AdmiMapper admiMapper;
     @Autowired
     private OldMapper oldMapper;
+    @Autowired
+    private PasswordService passwordService;
 
     @Transactional
     @Override
@@ -45,6 +49,9 @@ public class ManageUserServiceImpl implements ManageUserService {
     @Override
     public void update(User user) throws DuplicateKeyException {
         user.setUpdateTime(LocalDateTime.now());
+        if (StringUtils.hasText(user.getPassword())) {
+            user.setPassword(passwordService.encodeIfNecessary(user.getPassword()));
+        }
 
         userMapper.update(user);
     }
