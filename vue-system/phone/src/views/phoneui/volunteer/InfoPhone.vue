@@ -152,7 +152,7 @@ export default {
     name: 'InfoPhone',
     data() {
         return{
-            baseUrl: "http://localhost:8080",
+            baseUrl: request.defaults.baseURL,
             form: {},
             dialogVisible: false,
             dialogVisible1: false,

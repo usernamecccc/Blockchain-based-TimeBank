@@ -4,9 +4,17 @@ import router from '@/router';
 import store from '@/store';
 import { removeToken, getToken } from './auth';
 
+const resolveBaseURL = () => {
+  const configured = process.env.VUE_APP_API_BASE_URL;
+  if (configured) {
+    return configured.replace(/\/$/, '');
+  }
+  return process.env.NODE_ENV === 'development' ? 'http://localhost:8080' : '/api';
+};
+
 // 创建 axios 实例
 const request = axios.create({
-  baseURL: 'http://localhost:8080', // 设置基础 URL
+  baseURL: resolveBaseURL(), // 设置基础 URL
   timeout: 5000 // 设置超时时间
 });
 
@@ -37,7 +45,7 @@ request.interceptors.response.use(
       alert('身份验证失败，请重新登录。');
       store.commit('setIsLoggedIn', false);
       router.push('/'); // 重定向到登录页面
-      removeToken('token'); // 清除本地存储的 token
+      removeToken('token'); // 清除本地存储的token
     }
     return response.data;
   },
@@ -45,4 +53,5 @@ request.interceptors.response.use(
     return Promise.reject(error);
   }
 );
+
 export default request;

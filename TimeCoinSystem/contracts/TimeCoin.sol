@@ -2,7 +2,7 @@
 pragma solidity ^0.8.0;
 
 /**@title TimeCoin system contract 1.0
- * @author 罗政
+ * @author 康凤轩
  * @notice This contract is for managing the time coin of users
  */
 contract TimeCoin {
